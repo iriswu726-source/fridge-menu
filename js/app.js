@@ -39,13 +39,8 @@ const md=d=>(d.getMonth()+1)+"/"+d.getDate();
 
 /* ---------- 狀態 ---------- */
 const SKEY="fridge-week-menu-v2",OLD_KEY="fridge-week-menu-v1";
-function sample(){
-  const list=[["egg",12,10],["chicken",500,30],["chicken_thigh",300,30],["pork_mince",300,30],["salmon",240,30],["tofu",400,3],["dried_tofu",200,5],["edamame",200,4],
-    ["milk",1900,6],["yogurt",500,9],["toast",10,4],["sweetpotato",600,12],["potato",300,14],["cabbage",900,9],["bokchoy",400,2],["spinach",300,3],
-    ["broccoli",500,5],["carrot",300,14],["tomato",500,3],["onion",300,25],["mushroom",150,4],["woodear",150,5],["banana",6,4],["guava",3,6],["kiwi",4,10],
-    ["nuts",200,60],["sesame",100,60]];
-  return {goal:"keep",sex:"f",weight:55,act:30,people:1,staples:true,grains:false,diet:"all",avoid:[],batch:true,seed:7,locks:{},custom:[],sample:true,
-    inv:list.map(([key,qty,e])=>({key,qty,exp:addDays(e)}))};
+function defaults(){
+  return {goal:"keep",sex:"f",weight:55,act:30,people:1,staples:true,grains:false,diet:"all",avoid:[],batch:true,seed:7,locks:{},custom:[],inv:[]};
 }
 function load(){
   let j=null;
@@ -53,10 +48,11 @@ function load(){
   if(!j){ // 從第一版資料搬過來：「優先」視為兩天內到期
     try{const o=JSON.parse(localStorage.getItem(OLD_KEY));if(o&&Array.isArray(o.inv)){j=o;j.inv=o.inv.map(i=>({key:i.key,qty:i.qty,exp:i.prio?addDays(2):null}))}}catch(e){}
   }
-  if(!j||!Array.isArray(j.inv))return sample();
-  const s=Object.assign(sample(),j);
+  if(!j||!Array.isArray(j.inv))return defaults();
+  const s=Object.assign(defaults(),j);
   delete s.over;
-  if(s.sample)s.inv=sample().inv; // 範例食材的到期日跟著今天走
+  if(s.sample){s.inv=[];s.locks={}} // 舊版的範例食材不保留
+  delete s.sample;
   if(!s.locks||typeof s.locks!=="object")s.locks={};
   if(!Array.isArray(s.avoid))s.avoid=[];
   return s;
@@ -337,24 +333,28 @@ function dlBadge(dl){
   return `<span class="dl ${dl<=2?"hot":dl<=5?"warm":"cool"}">剩 ${dl} 天</span>`;
 }
 
-let PLAN=null,openSlot=null;
+let PLAN=null,openSlot=null,memoOpen=false,dayIdx=0;
+const SLIDE_GAP=16; // 與 css .board 的 gap 相同
 const bought=new Set();
 
 function renderModes(){
-  $("modes").innerHTML=Object.entries(GOALS).map(([k,G])=>{const T=targets(k);return `
-    <button type="button" class="mode" role="tab" data-goal="${k}" id="tab-${k}" aria-selected="${S.goal===k}" aria-controls="memo">
-      <span class="mn">${G.n}</span><span class="ms">${G.sub}</span><span class="mk">${T.k.toLocaleString()} kcal・蛋白 ${T.p} g</span>
+  $("modes").innerHTML=Object.entries(GOALS).map(([k,G])=>{const T=targets(k),on=S.goal===k;return `
+    <button type="button" class="mode" data-goal="${k}" id="tab-${k}" aria-pressed="${on}"${on?` aria-expanded="${memoOpen}" aria-controls="memo"`:""}>
+      <span class="mn">${G.n}<span class="more">${on?(memoOpen?"收起說明 ▴":"看說明 ▾"):""}</span></span><span class="ms">${G.sub}</span><span class="mk">${T.k.toLocaleString()} kcal・蛋白 ${T.p} g</span>
     </button>`}).join("");
   document.documentElement.style.setProperty("--tab-c",{cut:"var(--tape-b)",keep:"var(--tape-g)",gain:"var(--tape-p)"}[S.goal]);
-  $("memo").setAttribute("aria-labelledby","tab-"+S.goal);
 }
 function renderMemo(){
   const G=GOALS[S.goal];
+  $("memo").hidden=!memoOpen;
+  $("memo").dataset.goal=S.goal;
+  if(!memoOpen)return;
   $("memo").innerHTML=`
     <div><h3>${G.n}模式怎麼排</h3><ul>${G.tips.map(t=>`<li>${t}</li>`).join("")}</ul></div>
     <div><h3>用你的冰箱，${G.n}推薦這幾道</h3>
-      <div class="recs">${PLAN.recs.map(x=>`<span class="rec">${esc(x.r.n)}<span class="n">${Math.round(x.avail*100)}%</span></span>`).join("")||`<span class="hint">沒有符合忌口條件的菜色</span>`}</div>
-      <p class="hint" style="margin:6px 0 0">百分比＝冰箱食材齊全度。菜單會優先從這些菜挑，再依當天缺的營養和快到期的食材調整。</p></div>`;
+      ${S.inv.length?`<div class="recs">${PLAN.recs.map(x=>`<span class="rec">${esc(x.r.n)}<span class="n">${Math.round(x.avail*100)}%</span></span>`).join("")||`<span class="hint">沒有符合忌口條件的菜色</span>`}</div>
+      <p class="hint" style="margin:6px 0 0">百分比＝冰箱食材齊全度。菜單會優先從這些菜挑，再依當天缺的營養和快到期的食材調整。</p>`
+      :`<p class="hint" style="margin:0">先在冰箱加入食材，這裡就會列出用得到你現有食材的推薦菜色。</p>`}</div>`;
 }
 
 function renderSettings(){
@@ -371,8 +371,8 @@ function renderSettings(){
 function renderInv(){
   $("ingList").innerHTML=Object.values(ING).filter(i=>i.cat!=="fat"&&!i.custom).map(i=>`<option value="${esc(i.n)}"></option>`).join("");
   $("inv-count").textContent=S.inv.length+" 項";
-  $("sampleNote").innerHTML=S.sample?`<p class="note">目前是<b>範例食材</b>，改成你冰箱裡的東西就會重新排。</p>`:"";
-  if(!S.inv.length){$("inv").innerHTML=`<p class="empty">冰箱是空的。從上方加入食材，或載入範例看看效果。</p>`;return}
+  $("emptyNote").innerHTML=S.inv.length?"":`<p class="note">冰箱還是空的。加入現有的食材和到期日，菜單會優先用你有的東西；在那之前，右邊的菜單都要用買的。</p>`;
+  if(!S.inv.length){$("inv").innerHTML="";return}
   const groups={};
   S.inv.forEach((it,idx)=>{const c=ING[it.key].cat;(groups[c]=groups[c]||[]).push([it,idx])});
   $("inv").innerHTML=Object.keys(CATS).filter(c=>groups[c]).map(c=>`
@@ -439,11 +439,12 @@ function mealHTML(m){
 
 function renderBoard(){
   const {T,days}=PLAN;
+  renderDayTabs();
   $("board").innerHTML=days.map((d,di)=>{
     const pe=pctE(d.tot);
     const low=[["p","蛋白質"],["fb","纖維"],["ca","鈣"],["fe","鐵"],["vc","維C"],["veg","蔬菜"]].filter(([k])=>d.tot[k]<T[k]*.8)
       .map(([k,n])=>`<span class="flag">${n} ${Math.round(d.tot[k]/T[k]*100)}%</span>`).join("");
-    return `<article class="day taped" aria-label="${d.date.getMonth()+1}月${d.date.getDate()}日">
+    return `<article class="day taped" id="day-${di}" role="tabpanel" aria-labelledby="dt-${di}" aria-label="${d.date.getMonth()+1}月${d.date.getDate()}日">
       <div class="dayhead"><div class="datecirc"><span class="mo">${d.date.getMonth()+1}月</span><span class="dd">${d.date.getDate()}</span></div>
         <span class="wd">週${WD[d.date.getDay()]}</span>${di===0?`<span class="today">今天</span>`:""}</div>
       ${d.meals.map(mealHTML).join("")}
@@ -459,6 +460,27 @@ function renderBoard(){
         <div class="flags">${low||`<span class="flag ok">主要營養素皆 ≥ 80%</span>`}</div>
       </div>
     </article>`}).join("");
+  goDay(dayIdx,false);
+}
+function renderDayTabs(){
+  const {T,days}=PLAN;
+  $("daytabs").innerHTML=days.map((d,i)=>{
+    const low=["p","fb","ca","fe","vc","veg"].some(k=>d.tot[k]<T[k]*.8);
+    return `<button type="button" class="daytab" role="tab" id="dt-${i}" data-day="${i}" aria-controls="day-${i}" aria-selected="${i===dayIdx}" tabindex="${i===dayIdx?0:-1}">
+      <span class="n">${md(d.date)}</span><span>${i===0?"今天":"週"+WD[d.date.getDay()]}</span>${low?`<i class="dot" title="有營養素不足 80%"></i>`:""}</button>`}).join("");
+}
+// 捲到第 i 天；smooth=false 用在重新產生畫面後維持原本那天
+function goDay(i,smooth){
+  const n=PLAN.days.length;dayIdx=Math.max(0,Math.min(n-1,i));
+  const bd=$("board");
+  bd.scrollTo({left:dayIdx*(bd.clientWidth+SLIDE_GAP),behavior:smooth===false?"auto":"smooth"});
+  markDay();
+}
+function markDay(){
+  document.querySelectorAll(".daytab").forEach((b,i)=>{const on=i===dayIdx;b.setAttribute("aria-selected",on);b.tabIndex=on?0:-1});
+  const t=document.querySelector(".daytab[aria-selected=true]");
+  if(t)t.scrollIntoView({block:"nearest",inline:"nearest"});
+  $("prevDay").disabled=dayIdx===0;$("nextDay").disabled=dayIdx===PLAN.days.length-1;
 }
 
 function buyEntries(){
@@ -485,7 +507,7 @@ function renderPlan(){
   renderModes();renderMemo();renderTiles();renderHeat();renderBoard();renderLists();
 }
 function renderAll(){renderSettings();renderInv();renderPlan()}
-function changed(inv){if(inv)S.sample=false;save();}
+function changed(){save()}
 
 /* ---------- 庫存操作 ---------- */
 function addToInv(key,qty,exp){
@@ -497,8 +519,12 @@ function addToInv(key,qty,exp){
 }
 
 /* ---------- 事件 ---------- */
-function setGoal(g){S.goal=g;openSlot=null;save();renderSettings();renderPlan();$("tab-"+g).focus()}
-$("modes").addEventListener("click",e=>{const b=e.target.closest("[data-goal]");if(b&&b.dataset.goal!==S.goal)setGoal(b.dataset.goal)});
+function setGoal(g){
+  if(g===S.goal){memoOpen=!memoOpen;renderModes();renderMemo()} // 再點一次同一個模式：展開／收起說明
+  else{S.goal=g;memoOpen=true;openSlot=null;save();renderSettings();renderPlan()}
+  $("tab-"+g).focus();
+}
+$("modes").addEventListener("click",e=>{const b=e.target.closest("[data-goal]");if(b)setGoal(b.dataset.goal)});
 $("modes").addEventListener("keydown",e=>{
   if(e.key!=="ArrowRight"&&e.key!=="ArrowLeft")return;
   const ks=Object.keys(GOALS),i=ks.indexOf(S.goal);
@@ -562,7 +588,6 @@ $("inv").addEventListener("click",e=>{
   if(ING[it.key].custom)S.custom=S.custom.filter(c=>c.key!==it.key);
   changed(true);renderInv();renderPlan();
 });
-$("loadSample").addEventListener("click",()=>{const s=sample();S.inv=s.inv;S.sample=true;S.locks={};save();renderAll()});
 let clearArmed=false;
 $("clearInv").addEventListener("click",()=>{
   if(!clearArmed){clearArmed=true;$("clearInv").textContent="再按一次確認清空";setTimeout(()=>{clearArmed=false;$("clearInv").textContent="清空冰箱"},3000);return}
@@ -579,6 +604,22 @@ $("board").addEventListener("click",e=>{
     save();renderPlan();return;
   }
   if(a){openSlot=openSlot===a.dataset.alt?null:a.dataset.alt;renderBoard()}
+});
+let scrollTimer=0;
+$("board").addEventListener("scroll",()=>{ // 手指左右滑動後，同步日期按鈕
+  clearTimeout(scrollTimer);
+  scrollTimer=setTimeout(()=>{
+    const b=$("board"),w=b.clientWidth;
+    const i=Math.round(b.scrollLeft/(w+SLIDE_GAP));
+    if(i!==dayIdx){dayIdx=Math.max(0,Math.min(PLAN.days.length-1,i));markDay()}
+  },80);
+},{passive:true});
+$("prevDay").addEventListener("click",()=>goDay(dayIdx-1));
+$("nextDay").addEventListener("click",()=>goDay(dayIdx+1));
+$("daytabs").addEventListener("click",e=>{const b=e.target.closest("[data-day]");if(b)goDay(+b.dataset.day)});
+$("daytabs").addEventListener("keydown",e=>{
+  const k={ArrowRight:1,ArrowLeft:-1}[e.key];if(!k)return;
+  e.preventDefault();goDay(dayIdx+k);const t=$("dt-"+dayIdx);if(t)t.focus();
 });
 $("board-note").addEventListener("click",e=>{if(e.target.closest("[data-unlock]")){S.locks={};save();renderPlan()}});
 $("buy").addEventListener("change",e=>{

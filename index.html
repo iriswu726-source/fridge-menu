@@ -20,40 +20,39 @@
     <button id="reroll" class="btn primary" type="button">重新排菜單</button>
   </header>
 
-  <div class="modes" role="tablist" aria-label="飲食目標" id="modes"></div>
-  <section class="memo" id="memo" role="tabpanel"></section>
+  <section class="sheet taped settings" style="--tape:var(--tape-b)" aria-labelledby="set-h">
+    <h2 id="set-h">個人設定 <span class="label">19–50 歲成人</span></h2>
+    <div class="modes" role="group" aria-label="飲食目標" id="modes"></div>
+    <div class="memo" id="memo" hidden></div>
+    <div class="form-grid">
+      <div class="field"><label for="sex">性別</label>
+        <select id="sex"><option value="f">女性</option><option value="m">男性</option></select></div>
+      <div class="field"><label for="weight">體重（kg）</label>
+        <input id="weight" type="number" min="30" max="150" step="1" inputmode="numeric"></div>
+      <div class="field"><label for="act">活動量</label>
+        <select id="act">
+          <option value="25">久坐少動</option><option value="30">輕度活動</option>
+          <option value="35">中度活動</option><option value="40">重度活動</option>
+        </select></div>
+      <div class="field"><label for="people">用餐人數</label>
+        <input id="people" type="number" min="1" max="10" step="1" inputmode="numeric"></div>
+      <div class="field"><label for="diet">飲食類型</label>
+        <select id="diet"><option value="all">一般葷食</option><option value="veg">蛋奶素</option></select></div>
+      <div class="field"><label for="grains">主食</label>
+        <select id="grains"><option value="0">白米飯</option><option value="1">糙米飯</option></select></div>
+      <label class="check" for="batch"><input id="batch" type="checkbox"> 晚餐多煮一份，當隔天午餐便當</label>
+      <label class="check" for="staples"><input id="staples" type="checkbox"> 米、麵條、燕麥視為常備乾貨（不必列在冰箱裡）</label>
+      <fieldset class="avoid"><legend>不吃的食材（點選排除）</legend><div class="pills" id="avoidList"></div></fieldset>
+    </div>
+    <div class="targets" id="targets"></div>
+  </section>
 
   <div class="layout">
     <aside class="side">
-      <section class="sheet taped" style="--tape:var(--tape-b)" aria-labelledby="set-h">
-        <h2 id="set-h">個人設定 <span class="label">19–50 歲</span></h2>
-        <div class="form-grid">
-          <div class="field"><label for="sex">性別</label>
-            <select id="sex"><option value="f">女性</option><option value="m">男性</option></select></div>
-          <div class="field"><label for="weight">體重（kg）</label>
-            <input id="weight" type="number" min="30" max="150" step="1" inputmode="numeric"></div>
-          <div class="field"><label for="act">活動量</label>
-            <select id="act">
-              <option value="25">久坐少動</option><option value="30">輕度活動</option>
-              <option value="35">中度活動</option><option value="40">重度活動</option>
-            </select></div>
-          <div class="field"><label for="people">用餐人數</label>
-            <input id="people" type="number" min="1" max="10" step="1" inputmode="numeric"></div>
-          <div class="field"><label for="diet">飲食類型</label>
-            <select id="diet"><option value="all">一般葷食</option><option value="veg">蛋奶素</option></select></div>
-          <div class="field"><label for="grains">主食</label>
-            <select id="grains"><option value="0">白米飯</option><option value="1">糙米飯</option></select></div>
-          <label class="check" for="batch"><input id="batch" type="checkbox"> 晚餐多煮一份，當隔天午餐便當</label>
-          <label class="check" for="staples"><input id="staples" type="checkbox"> 米、麵條、燕麥視為常備乾貨（不必列在冰箱裡）</label>
-          <fieldset class="avoid"><legend>不吃的食材（點選排除）</legend><div class="pills" id="avoidList"></div></fieldset>
-        </div>
-        <div class="targets" id="targets"></div>
-      </section>
-
       <section class="sheet taped" style="--tape:var(--tape-p)" aria-labelledby="fr-h">
         <h2 id="fr-h">冰箱現有食材 <span class="label" id="inv-count"></span></h2>
         <form class="add" id="addForm" autocomplete="off">
-          <input id="addName" list="ingList" placeholder="食材，例如：雞蛋" aria-label="食材名稱">
+          <input id="addName" list="ingList" placeholder="輸入食材名稱" aria-label="食材名稱">
           <input id="addQty" type="number" min="0" step="any" placeholder="數量" aria-label="數量" inputmode="decimal">
           <button class="btn small" type="submit">加入</button>
           <div class="row2">
@@ -62,10 +61,9 @@
           </div>
         </form>
         <datalist id="ingList"></datalist>
-        <div id="sampleNote"></div>
+        <div id="emptyNote"></div>
         <div class="inv" id="inv"></div>
         <div class="inv-actions">
-          <button class="btn small" type="button" id="loadSample">載入範例食材</button>
           <button class="btn small danger" type="button" id="clearInv">清空冰箱</button>
         </div>
       </section>
@@ -90,6 +88,11 @@
         <div class="sec-head">
           <h2 id="board-h">一週菜單</h2>
           <span class="aside" id="board-note"></span>
+        </div>
+        <div class="daynav">
+          <button type="button" class="navbtn" id="prevDay" aria-label="前一天">‹</button>
+          <div class="daytabs" id="daytabs" role="tablist" aria-label="選擇日期"></div>
+          <button type="button" class="navbtn" id="nextDay" aria-label="後一天">›</button>
         </div>
         <div class="board" id="board"></div>
       </section>
