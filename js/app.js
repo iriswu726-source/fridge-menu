@@ -40,7 +40,7 @@ const md=d=>(d.getMonth()+1)+"/"+d.getDate();
 /* ---------- 狀態 ---------- */
 const SKEY="fridge-week-menu-v2",OLD_KEY="fridge-week-menu-v1";
 function defaults(){
-  return {goal:"keep",sex:"f",weight:55,act:30,people:1,staples:true,grains:false,diet:"all",avoid:[],batch:true,seed:7,locks:{},custom:[],inv:[]};
+  return {goal:"keep",sex:"f",weight:55,act:30,people:1,staples:true,grains:false,diet:"all",avoid:[],batch:true,seed:7,locks:{},eaten:{},setOpen:true,custom:[],inv:[]};
 }
 function load(){
   let j=null;
@@ -55,6 +55,10 @@ function load(){
   delete s.sample;
   if(!s.locks||typeof s.locks!=="object")s.locks={};
   if(!Array.isArray(s.avoid))s.avoid=[];
+  if(!s.eaten||typeof s.eaten!=="object")s.eaten={};
+  // 鎖定與已吃都以「日期＋餐別」記錄；過了的日子就清掉，菜單自動往後排
+  const today=iso(today0()),keep=k=>/^\d{4}-\d{2}-\d{2}/.test(k)&&k.slice(0,10)>=today;
+  for(const o of [s.locks,s.eaten])for(const k of Object.keys(o))if(!keep(k))delete o[k];
   return s;
 }
 function save(){try{localStorage.setItem(SKEY,JSON.stringify(S))}catch(e){}}
@@ -187,8 +191,16 @@ function makePlan(){
     // 到期沒用完的食材：從庫存移除，記在「會過期」
     for(const k in expDay)if(expDay[k]<d&&stock[k]>0.5){if(stock[k]>=Math.max(50,ING[k].gpu))waste[k]={g:stock[k],day:expDay[k]};stock[k]=0}
     const day={date:dayDate(d),meals:[],snacks:[],tot:Z(),prep:[]};
+    const dISO=iso(day.date);
     MEALS.forEach(([m,label,share],mi)=>{
-      const key=d+m;
+      const key=dISO+m;
+      const ate=S.eaten[key];
+      if(ate){
+        const r=RECIPES.find(x=>x.id===ate.id)||{id:ate.id,n:ate.n,d:ate.d,m,items:[],main:""};
+        const tot=Object.assign(Z(),ate.tot);add(day.tot,tot);
+        day.meals.push({m,label,key,r,main:r.main,items:ate.items.map(it=>Object.assign({},it,{st:"eaten"})),tot,batch:!!ate.batch,tags:[],eaten:true,alts:[]});
+        hist.push({d,id:r.id});return;
+      }
       const cands=pool.filter(r=>r.m.includes(m));
       if(!cands.length){day.meals.push({m,label,key,r:null,items:[],tot:Z(),tags:[],alts:[]});return}
       const rnd=rng(S.seed*1009+d*31+mi*7);
@@ -204,7 +216,7 @@ function makePlan(){
         const prev=day.meals[day.meals.length-1];
         if(prev&&prev.r&&prev.main===r.main)v-=20;
         const t=day.tot,gap=(k,w)=>Math.min(base[k],Math.max(0,T[k]-t[k]))/T[k]*w;
-        const nb=gap("p",S.goal==="keep"?30:40)+gap("veg",20)+gap("fb",16)+gap("ca",14)+gap("fe",18)+gap("vc",6);
+        const nb=gap("p",S.goal==="keep"?30:40)+gap("veg",20)+gap("fb",S.goal==="cut"?28:16)+gap("ca",14)+gap("fe",18)+gap("vc",6);
         return {r,items,avail,base,score:avail*100+ub+nb+v+goalScore(base)+rnd()*10};
       }).sort((a,b)=>b.score-a.score);
 
@@ -215,7 +227,7 @@ function makePlan(){
         if(pd&&pd.r&&!pd.r.nb){pick=scored.find(x=>x.r.id===pd.r.id);batch=!!pick}
       }
       pick=pick||scored[0];
-      const s=Math.min(G.scale[1],Math.max(G.scale[0],T.k*share*(S.goal==="cut"?.9:1)/pick.base.k));
+      const s=Math.min(G.scale[1],Math.max(G.scale[0],T.k*share*(S.goal==="cut"?.8:1)/pick.base.k));
       const tot=Z();
       const items=pick.items.map(it=>{
         let f=s;
@@ -233,12 +245,20 @@ function makePlan(){
       hist.push({d,id:pick.r.id});
     });
 
-    // 加餐：水果、蛋白質、乳品、熱量
+    // 加餐已經吃了：用紀錄
+    const snackKey=dISO+"S",ateS=S.eaten[snackKey];
+    day.snackKey=snackKey;
+    if(ateS){
+      add(day.tot,Object.assign(Z(),ateS.tot));
+      day.snacks=ateS.items.map(it=>Object.assign({},it,{st:"eaten"}));day.snacksEaten=true;
+      days.push(day);continue;
+    }
+    // 加餐：水果、乳品、蛋白質、熱量
     const t=day.tot,used=new Set();
     const snack=(key,g,why)=>{used.add(key);const urgent=stock[key]>0&&urg(key)<=3;const st=take(key,g);add(day.tot,nut(key,g));day.snacks.push({key,g,st,why,urgent})};
 
     // 清冰箱：今天到期、還剩不少的蔬菜加進晚餐，吐司和水果當加餐
-    const dinner=day.meals.find(x=>x.m==="D"&&x.r);
+    const dinner=day.meals.find(x=>x.m==="D"&&x.r&&!x.eaten);
     let extras=0;
     for(const k of Object.keys(stock)){
       if(urg(k)!==0||!allowed(k)||isPantry(k))continue;
@@ -247,12 +267,22 @@ function makePlan(){
         const g=roundAmt(k,Math.min(left,150));take(k,g);const nt=nut(k,g);add(dinner.tot,nt);add(day.tot,nt);
         dinner.items.push({key:k,g,st:"ok",urgent:true,extra:true});extras++;
       }else if(i.cat==="fruit"&&left>=i.gpu*.5){snack(k,roundAmt(k,Math.min(left,i.gpu*2)),"快到期")}
-      else if(k==="toast"&&left>=35&&t.k<T.k*1.05){snack(k,roundAmt(k,Math.min(left,70)),"快到期")}
+      else if(k==="toast"&&left>=35&&t.k<T.k*(S.goal==="cut"?.9:1.05)){snack(k,roundAmt(k,Math.min(left,70)),"快到期")}
     }
     const has=(k,min)=>allowed(k)&&(stock[k]||0)>=min;
-    if(t.fruit<1.8){
-      const k=pickSlot("fruit",new Set());
-      snack(k,roundAmt(k,Math.min(S.goal==="cut"?160:200,Math.max(100,(2-t.fruit)*120)),10),"水果");
+    if(t.fruit<1.8){ // 每天 2 份水果（每份約 120 g）
+      const k=pickSlot("fruit",new Set(used)),raw=Math.min(240,Math.max(100,(2-t.fruit)*120));
+      let g=roundAmt(k,raw,10);
+      if(ING[k].u!=="g"&&g>raw+20)g-=ING[k].gpu*.5; // 以顆、根計的水果寧可少半個，不要多
+      snack(k,g,"水果");
+    }
+    if(t.dairy<1.3){ // 乳品 1.5 杯，同時補鈣和蛋白質
+      let list=(S.goal==="cut"?["yogurt","milk"]:["milk","yogurt"]).filter(k=>allowed(k)&&!used.has(k));
+      if(!list.length&&allowed("soymilk")&&!used.has("soymilk"))list=["soymilk"];
+      if(list.length){
+        const k=list.find(x=>has(x,100))||list[0],cup=ING[k].cup||240;
+        snack(k,roundAmt(k,Math.min(S.goal==="cut"?cup:300,Math.max(120,(1.5-t.dairy)*cup)),10),"乳品");
+      }
     }
     const pGap=T.p-t.p;
     if(pGap>T.p*(S.goal==="keep"?.2:.08)&&(S.goal!=="cut"||t.k<T.k)){
@@ -260,15 +290,6 @@ function makePlan(){
       if(opt.length){
         const [k,g]=opt.find(([k,g])=>has(k,g*P))||opt[0];
         snack(k,k==="egg"&&pGap>15&&S.goal==="gain"?110:g,"蛋白質");
-      }
-    }
-    const room=()=>S.goal!=="cut"||t.k<T.k*1.01;
-    if(t.dairy<1.3&&room()){
-      let list=(S.goal==="cut"?["yogurt","milk"]:["milk","yogurt"]).filter(k=>allowed(k)&&!used.has(k));
-      if(!list.length&&allowed("soymilk")&&!used.has("soymilk"))list=["soymilk"];
-      if(list.length){
-        const k=list.find(x=>has(x,100))||list[0],cup=ING[k].cup||240;
-        snack(k,roundAmt(k,Math.min(S.goal==="cut"?150:300,Math.max(120,(1.5-t.dairy)*cup)),10),"乳品");
       }
     }
     const filler=()=>allowed("nuts")?"nuts":"sweetpotato";
@@ -357,12 +378,21 @@ function renderMemo(){
       :`<p class="hint" style="margin:0">先在冰箱加入食材，這裡就會列出用得到你現有食材的推薦菜色。</p>`}</div>`;
 }
 
+function renderSetOpen(){
+  const open=S.setOpen!==false;
+  $("setBody").hidden=!open;$("setSummary").hidden=open;
+  $("setToggle").setAttribute("aria-expanded",open);
+  $("setToggle").textContent=open?"收起設定 ▴":"修改設定 ▾";
+  const T=targets();
+  $("setSummary").textContent=`${S.sex==="f"?"女性":"男性"}・${S.weight} kg・${$("act").selectedOptions[0].text}・${S.people} 人・${S.diet==="veg"?"蛋奶素":"一般葷食"}・${S.grains?"糙米飯":"白米飯"}${S.avoid.length?"・不吃"+S.avoid.map(k=>AVOID[k]).join("、"):""}\n每日 ${T.k.toLocaleString()} kcal・蛋白質 ${T.p} g`;
+}
 function renderSettings(){
   $("sex").value=S.sex;$("weight").value=S.weight;$("act").value=String(S.act);$("people").value=S.people;
   $("staples").checked=!!S.staples;$("diet").value=S.diet;$("grains").value=S.grains?"1":"0";$("batch").checked=!!S.batch;
   $("avoidList").innerHTML=Object.entries(AVOID).map(([k,n])=>`<label class="pill"><input type="checkbox" id="av-${k}" data-avoid="${k}" ${S.avoid.includes(k)?"checked":""}><span>${n}</span></label>`).join("");
   const T=targets(),G=GOALS[S.goal];
   $("targets").innerHTML=`維持熱量 <b>${maintK().toLocaleString()}</b> kcal，${G.n}目標 <b>${T.k.toLocaleString()}</b> kcal<br>蛋白質 <b>${T.p}</b> g・纖維 <b>${T.fb}</b> g・鈣 <b>1000</b> mg・鐵 <b>${T.fe}</b> mg・維C <b>100</b> mg<br>三餐熱量約 24%／32%／28%，其餘由加餐補足${S.people>1?`；份量顯示為每人，扣庫存時乘上 ${S.people} 人`:""}。`;
+  renderSetOpen();
   const d0=today0(),d6=dayDate(6);
   $("stamp").innerHTML=`<small>WEEK</small><b>${isoWeek(d0)}</b><small>${md(d0)}–${md(d6)}</small>`;
   $("foot").textContent=`營養目標依衛福部《國人膳食營養素參考攝取量》第八版與《每日飲食指南》：維持熱量＝體重 × 活動係數（25／30／35／40 kcal/kg），減脂取 80%（女性不低於 1200、男性不低於 1500 kcal），增肌取 110%；蛋白質 維持 1.1、減脂 1.6、增肌 1.8 g/kg；膳食纖維 14 g／1000 kcal（減脂至少 25 g）；鈣 1000 mg；鐵 女 15／男 10 mg；維生素 C 100 mg；蔬菜 ≥ 3 份（1 份約 100 g 生重）、水果 ≥ 2 份、乳品 1.5–2 杯。食材營養素為參考台灣食品營養成分資料庫的近似值，保存天數為冷藏參考值；油、鹽、醬油、蔥薑蒜等調味料視為家中常備。此工具僅供日常飲食規劃參考，有慢性病、懷孕或特殊飲食需求請諮詢營養師。`;
@@ -371,7 +401,7 @@ function renderSettings(){
 function renderInv(){
   $("ingList").innerHTML=Object.values(ING).filter(i=>i.cat!=="fat"&&!i.custom).map(i=>`<option value="${esc(i.n)}"></option>`).join("");
   $("inv-count").textContent=S.inv.length+" 項";
-  $("emptyNote").innerHTML=S.inv.length?"":`<p class="note">冰箱還是空的。加入現有的食材和到期日，菜單會優先用你有的東西；在那之前，右邊的菜單都要用買的。</p>`;
+  $("emptyNote").innerHTML=S.inv.length?"":`<p class="note">冰箱還是空的。加入現有的食材和到期日，菜單會優先用你有的東西；在那之前，菜單上的食材都要用買的。</p>`;
   if(!S.inv.length){$("inv").innerHTML="";return}
   const groups={};
   S.inv.forEach((it,idx)=>{const c=ING[it.key].cat;(groups[c]=groups[c]||[]).push([it,idx])});
@@ -415,6 +445,7 @@ function renderHeat(){
 
 function chip(it){
   const i=ING[it.key];
+  if(it.st==="eaten")return `<span class="chip pantry" title="已吃，已從冰箱扣掉">${esc(i.n)} ${fmtAmt(it.key,it.g)}</span>`;
   const cls=it.st==="pantry"?"pantry":it.st==="miss"?"miss":it.st==="part"?"part":it.urgent?"prio":"";
   const tag=it.st==="miss"?`<span class="x">缺</span>`:it.st==="part"?`<span class="x">少</span>`:"";
   const title=it.st==="pantry"?"常備食材":it.st==="miss"?"冰箱沒有，列入購物清單":it.st==="part"?"冰箱存量不足，差額列入購物清單":it.urgent?"快到期，優先用掉":"冰箱有";
@@ -422,12 +453,22 @@ function chip(it){
   return `<span class="chip ${cls}" title="${it.extra?"快到期，加一道清炒／燙青菜用掉":title}">${it.extra?"加菜：":""}${esc(i.n)} ${fmtAmt(it.key,it.g)}${cook?` <span class="cook">（${cook}）</span>`:""}${tag}</span>`;
 }
 
-function mealHTML(m){
+function eatBox(key,on,label){
+  return `<label class="ate${on?" on":""}" for="eat-${key}"><input type="checkbox" id="eat-${key}" data-eat="${key}" ${on?"checked":""}> ${label}</label>`;
+}
+function mealHTML(m,isToday){
   if(!m.r)return `<div class="meal" data-m="${m.m}"><div class="meal-top"><span class="mtag">${m.label}</span></div><p class="meal-empty">沒有符合忌口條件的菜色，請調整「不吃的食材」。</p></div>`;
+  if(m.eaten)return `<div class="meal eaten" data-m="${m.m}">
+    <div class="meal-top"><span class="mtag">${m.label}</span>${eatBox(m.key,true,"已吃")}</div>
+    <div class="dish static">${esc(m.r.n)}</div>
+    <div class="parts">${esc(m.r.d||"")}<br><span class="kc">${Math.round(m.tot.k)} kcal・蛋白質 ${Math.round(m.tot.p)} g</span></div>
+    <div class="chips">${m.items.map(chip).join("")}</div>
+    <p class="hint" style="margin:0">已從冰箱扣掉。取消勾選會把食材加回去。</p>
+  </div>`;
   const open=openSlot===m.key;
   const tags=(m.batch?[`<span class="tag bento">昨晚多煮的便當</span>`]:[]).concat(m.tags.map(t=>`<span class="tag">${t}</span>`));
   return `<div class="meal${m.locked?" locked":""}" data-m="${m.m}">
-    <div class="meal-top"><span class="mtag">${m.label}</span>
+    <div class="meal-top"><span class="mtag">${m.label}</span>${isToday?eatBox(m.key,false,"已吃"):""}
       <button type="button" class="lock" data-lock="${m.key}" aria-pressed="${m.locked}" title="${m.locked?"解除鎖定":"鎖定這餐，重新排菜單時不會換掉"}">${m.locked?"已鎖定":"鎖定"}</button></div>
     <button type="button" class="dish" data-alt="${m.key}" aria-expanded="${open}">${esc(m.r.n)}<span class="caret">${open?"收起":"換一道"}</span></button>
     <div class="parts">${esc(m.r.d)}<br><span class="kc">${Math.round(m.tot.k)} kcal・蛋白質 ${Math.round(m.tot.p)} g</span></div>
@@ -447,10 +488,10 @@ function renderBoard(){
     return `<article class="day taped" id="day-${di}" role="tabpanel" aria-labelledby="dt-${di}" aria-label="${d.date.getMonth()+1}月${d.date.getDate()}日">
       <div class="dayhead"><div class="datecirc"><span class="mo">${d.date.getMonth()+1}月</span><span class="dd">${d.date.getDate()}</span></div>
         <span class="wd">週${WD[d.date.getDay()]}</span>${di===0?`<span class="today">今天</span>`:""}</div>
-      ${d.meals.map(mealHTML).join("")}
+      ${d.meals.map(m=>mealHTML(m,di===0)).join("")}
       <div class="dayside">
         ${d.prep.length?`<div class="blk"><span class="label">備餐提醒</span><ul class="prep">${d.prep.map(p=>`<li${p.warn?' class="warn"':""}>${esc(p.t)}</li>`).join("")}</ul></div>`:""}
-        <div class="blk"><span class="label">加餐</span>
+        <div class="blk"><span class="label">加餐${di===0&&d.snacks.length?eatBox(d.snackKey,!!d.snacksEaten,"已吃"):""}</span>
           <div class="chips">${d.snacks.length?d.snacks.map(chip).join(""):`<span class="chip pantry">三餐已足夠</span>`}</div></div>
         <div class="blk"><span class="label">當日合計</span>
           <span class="tot">${Math.round(d.tot.k).toLocaleString()}<small> / ${T.k.toLocaleString()} kcal</small></span>
@@ -479,7 +520,7 @@ function goDay(i,smooth){
 function markDay(){
   document.querySelectorAll(".daytab").forEach((b,i)=>{const on=i===dayIdx;b.setAttribute("aria-selected",on);b.tabIndex=on?0:-1});
   const t=document.querySelector(".daytab[aria-selected=true]");
-  if(t)t.scrollIntoView({block:"nearest",inline:"nearest"});
+  if(t){const c=$("daytabs");c.scrollTo({left:t.offsetLeft-(c.clientWidth-t.offsetWidth)/2,behavior:"smooth"})} // 只左右捲日期列，不動整頁
   $("prevDay").disabled=dayIdx===0;$("nextDay").disabled=dayIdx===PLAN.days.length-1;
 }
 
@@ -518,6 +559,31 @@ function addToInv(key,qty,exp){
   }else S.inv.push({key,qty,exp:exp||null});
 }
 
+// 從冰箱扣掉 g 克，回傳實際扣到的量與原本的到期日
+function deductInv(key,g){
+  const ex=S.inv.find(x=>x.key===key);if(!ex)return null;
+  const gpu=ING[key].gpu,have=ex.qty*gpu,took=Math.min(have,g);
+  ex.qty=+((have-took)/gpu).toFixed(2);
+  if(ex.qty<=0.001)S.inv.splice(S.inv.indexOf(ex),1);
+  return took>0?[key,took,ex.exp||null]:null;
+}
+function markEaten(key,on){
+  if(!on){ // 取消：把扣掉的食材加回冰箱
+    const rec=S.eaten[key];
+    if(rec)for(const [k,g,exp] of rec.used)if(ING[k])addToInv(k,+(g/ING[k].gpu).toFixed(2),exp);
+    delete S.eaten[key];return;
+  }
+  const P=Math.max(1,Math.round(S.people)||1),day=PLAN.days[0];
+  const meal=day.meals.find(m=>m.key===key),isSnack=key===day.snackKey;
+  if(!meal&&!isSnack)return;
+  const items=(isSnack?day.snacks:meal.items).map(it=>({key:it.key,g:it.g}));
+  const used=[];
+  for(const it of items){if(isPantry(it.key))continue;const u=deductInv(it.key,it.g*P);if(u)used.push(u)}
+  const tot=Z();for(const it of items)add(tot,nut(it.key,it.key==="oil"?it.g:it.g));
+  S.eaten[key]=isSnack?{items,tot,used}:{id:meal.r.id,n:meal.r.n,d:meal.r.d,batch:meal.batch,items,tot,used};
+  delete S.locks[key];
+}
+
 /* ---------- 事件 ---------- */
 function setGoal(g){
   if(g===S.goal){memoOpen=!memoOpen;renderModes();renderMemo()} // 再點一次同一個模式：展開／收起說明
@@ -541,6 +607,7 @@ $("modes").addEventListener("keydown",e=>{
   S.batch=$("batch").checked;
   changed();renderAll();
 }));
+$("setToggle").addEventListener("click",()=>{S.setOpen=S.setOpen===false;save();renderSetOpen()});
 $("avoidList").addEventListener("change",e=>{
   const k=e.target.dataset.avoid;if(!k)return;
   S.avoid=e.target.checked?[...new Set(S.avoid.concat(k))]:S.avoid.filter(x=>x!==k);
@@ -595,6 +662,10 @@ $("clearInv").addEventListener("click",()=>{
   S.inv=[];S.custom=[];S.locks={};changed(true);renderAll();
 });
 $("reroll").addEventListener("click",()=>{S.seed=(S.seed*7+13)%100003;openSlot=null;save();renderPlan()});
+$("board").addEventListener("change",e=>{
+  const k=e.target.dataset.eat;if(!k)return;
+  markEaten(k,e.target.checked);save();renderInv();renderPlan();
+});
 $("board").addEventListener("click",e=>{
   const a=e.target.closest("[data-alt]"),p=e.target.closest("[data-pick]"),l=e.target.closest("[data-lock]");
   if(p){S.locks[p.dataset.pick]=p.dataset.id;openSlot=null;save();renderPlan();return}
@@ -646,4 +717,9 @@ $("copyBuy").addEventListener("click",()=>{
 });
 
 renderAll();
+
+// 加到主畫面後可離線開啟（只在 https 網站上註冊）
+if("serviceWorker" in navigator&&location.protocol==="https:"&&!/claude\.ai|claudeusercontent/.test(location.hostname)){
+  addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+}
 })();

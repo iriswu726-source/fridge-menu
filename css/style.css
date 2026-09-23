@@ -29,6 +29,7 @@
   --shadow:rgba(0,0,0,.35);
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{margin:0;color:var(--ink);font-family:var(--hand);font-size:15px;line-height:1.6;
   background-color:var(--paper);
   background-image:radial-gradient(var(--dot) 1.1px,transparent 1.4px);background-size:20px 20px}
@@ -161,7 +162,7 @@ table.heat{border-collapse:collapse;width:100%;min-width:780px;font-size:14px}
 .navbtn{flex:none;width:38px;height:38px;border:1.5px solid var(--ink);border-radius:50%;background:var(--sheet);font-size:24px;line-height:1;
   display:flex;align-items:center;justify-content:center;box-shadow:2px 2px 0 var(--ink);padding:0 0 3px}
 .navbtn:disabled{opacity:.3;box-shadow:none;cursor:default}
-.daytabs{flex:1;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:4px 2px 6px}
+.daytabs{position:relative;flex:1;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:4px 2px 6px}
 .daytabs::-webkit-scrollbar{display:none}
 .daytab{position:relative;flex:1 0 auto;min-width:64px;display:flex;flex-direction:column;align-items:center;line-height:1.2;
   border:1.5px solid var(--line);border-radius:8px;background:var(--sheet);padding:4px 8px}
@@ -295,3 +296,18 @@ textarea.copybox{width:100%;min-height:120px;margin-top:8px;background:var(--she
 .mtag{white-space:nowrap}
 .parts .kc{font-family:var(--num);font-size:14px}
 .lock{margin-top:0}
+
+/* 已吃 */
+.ate{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;color:var(--muted);cursor:pointer;margin-left:auto;margin-right:8px;white-space:nowrap}
+.ate input{accent-color:var(--green);margin:0}
+.ate.on{color:var(--green);font-weight:700}
+.meal-top{align-items:center}
+.meal.eaten{opacity:.72}
+.meal.eaten .dish{text-decoration:line-through;text-decoration-color:var(--green);text-decoration-thickness:2px}
+.dish.static{cursor:default}
+.dayside .label{display:flex;align-items:center;gap:6px}
+.dayside .label .ate{margin-left:auto;margin-right:0}
+
+/* 設定收合 */
+.settoggle{font-size:14px;font-weight:400}
+.setsum{white-space:pre-line;margin:12px 0 0;font-size:14px;color:var(--muted);line-height:1.7}

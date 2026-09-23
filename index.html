@@ -9,6 +9,13 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@300;400;700&family=Patrick+Hand&display=swap">
 <link rel="stylesheet" href="css/style.css">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#F7F3E8">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="冰箱菜單">
 </head>
 <body>
 <div class="wrap">
@@ -21,9 +28,11 @@
   </header>
 
   <section class="sheet taped settings" style="--tape:var(--tape-b)" aria-labelledby="set-h">
-    <h2 id="set-h">個人設定 <span class="label">19–50 歲成人</span></h2>
+    <h2 id="set-h">個人設定 <button type="button" class="linkbtn settoggle" id="setToggle" aria-controls="setBody" aria-expanded="true">收起設定 ▴</button></h2>
     <div class="modes" role="group" aria-label="飲食目標" id="modes"></div>
     <div class="memo" id="memo" hidden></div>
+    <p class="setsum" id="setSummary" hidden></p>
+    <div id="setBody">
     <div class="form-grid">
       <div class="field"><label for="sex">性別</label>
         <select id="sex"><option value="f">女性</option><option value="m">男性</option></select></div>
@@ -45,6 +54,7 @@
       <fieldset class="avoid"><legend>不吃的食材（點選排除）</legend><div class="pills" id="avoidList"></div></fieldset>
     </div>
     <div class="targets" id="targets"></div>
+    </div>
   </section>
 
   <div class="layout">

@@ -1,0 +1,16 @@
+{
+  "name": "冰箱週菜單",
+  "short_name": "冰箱菜單",
+  "description": "用冰箱現有食材，依減脂、維持、增肌目標排出一週早午晚餐，並檢查每日營養。",
+  "lang": "zh-Hant",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F7F3E8",
+  "theme_color": "#F7F3E8",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
