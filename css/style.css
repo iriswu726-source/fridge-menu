@@ -311,3 +311,18 @@ textarea.copybox{width:100%;min-height:120px;margin-top:8px;background:var(--she
 /* 設定收合 */
 .settoggle{font-size:14px;font-weight:400}
 .setsum{white-space:pre-line;margin:12px 0 0;font-size:14px;color:var(--muted);line-height:1.7}
+
+/* 冰箱優先 */
+.plan-area{display:flex;flex-direction:column;gap:26px;min-width:0}
+.welcome h2{font-size:22px}
+.steps{margin:0;padding-left:1.4em;line-height:1.9}
+.quick{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+.qpill{font-size:13.5px;border:1px dashed var(--ink);border-radius:999px;padding:0 10px;line-height:1.8;background:var(--sheet)}
+.qpill:hover{background:var(--tape-y);border-style:solid}
+.meal.short{background:repeating-linear-gradient(-45deg,transparent 0 10px,var(--sheet-2) 10px 12px);border-radius:4px}
+.alt .need{display:block;font-size:12px;color:var(--red)}
+.subh,.nutri-buy h3{font-size:15px;margin:4px 0 4px}
+.nutri-buy{margin-top:14px;padding-top:8px;border-top:1.5px dashed var(--line)}
+.nutri-buy .amt{white-space:normal;text-align:right;font-family:var(--hand);font-size:14px;color:var(--ink)}
+#shortNote:empty{display:none}
+#shortNote .note{margin:0}

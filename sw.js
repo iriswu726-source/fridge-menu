@@ -1,5 +1,5 @@
 // 離線快取：網站本身的檔案用「先連網、失敗再用快取」，確保有網路時一定拿到最新版
-const CACHE = "fridge-menu-v4";
+const CACHE = "fridge-menu-v5";
 const SHELL = [
   "./", "index.html", "css/style.css", "js/app.js",
   "data/ingredients.js", "data/recipes.js",

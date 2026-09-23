@@ -15,6 +15,13 @@ const STAPLES=["rice","brownrice","noodles","oats"];
 const VEG_CATS=["leafy","veg","mush"];
 const MEALS=[["B","早餐",.24],["L","午餐",.32],["D","晚餐",.28]]; // 其餘約 16% 由加餐補足
 const NK=["k","p","f","c","fb","ca","fe","vc"];
+const OK_AVAIL=.6; // 冰箱至少要有這道菜 60% 的食材，才會排進菜單
+// 營養不足時建議補買的食材（依序挑冰箱裡還沒有的）
+const NUTRI_SUGG={fe:["amaranth","spinach","beef","dried_tofu","edamame","oyster"],ca:["dried_tofu","milk","yogurt","kailan","smallfish","sesame"],
+  fb:["woodear","okra","sweetleaf","broccoli","guava","oats"],vc:["guava","kiwi","broccoli","kailan","greenpepper"],
+  p:["chicken","egg","tofu","fish","shrimp"],fruit:["guava","kiwi","banana","orange"],dairy:["milk","yogurt"],
+  veg:["cabbage","bokchoy","broccoli","spinach"],k:["sweetpotato","oats","egg","nuts"]};
+const NUTRI_NAME={k:"熱量",p:"蛋白質",fb:"膳食纖維",ca:"鈣",fe:"鐵",vc:"維生素 C",veg:"蔬菜",fruit:"水果",dairy:"乳品"};
 
 /* ---------- 三種目標模式 ---------- */
 const GOALS={
@@ -217,16 +224,22 @@ function makePlan(){
         if(prev&&prev.r&&prev.main===r.main)v-=20;
         const t=day.tot,gap=(k,w)=>Math.min(base[k],Math.max(0,T[k]-t[k]))/T[k]*w;
         const nb=gap("p",S.goal==="keep"?30:40)+gap("veg",20)+gap("fb",S.goal==="cut"?28:16)+gap("ca",14)+gap("fe",18)+gap("vc",6);
-        return {r,items,avail,base,score:avail*100+ub+nb+v+goalScore(base)+rnd()*10};
+        const mi0=items[0],mainOk=isPantry(mi0.key)||(stock[mi0.key]||0)>=mi0.g*P*.5;
+        return {r,items,avail,base,mainOk,score:avail*100+ub+nb+v+goalScore(base)+rnd()*10};
       }).sort((a,b)=>b.score-a.score);
 
       const lk=S.locks[key];
       let pick=lk&&scored.find(x=>x.r.id===lk),batch=false;
       if(!pick&&S.batch&&m==="L"&&d>0){ // 昨晚多煮一份的便當
         const pd=days[d-1].meals.find(x=>x.m==="D");
-        if(pd&&pd.r&&!pd.r.nb){pick=scored.find(x=>x.r.id===pd.r.id);batch=!!pick}
+        if(pd&&pd.r&&!pd.r.nb){const c=scored.find(x=>x.r.id===pd.r.id);if(c&&c.avail>=OK_AVAIL&&c.mainOk){pick=c;batch=true}}
       }
-      pick=pick||scored[0];
+      if(!pick)pick=scored.find(x=>x.avail>=OK_AVAIL&&x.mainOk);
+      if(!pick){ // 冰箱不夠做這餐：不硬排，改列出「補一兩樣就能做」的菜
+        const sugg=[...scored].sort((a,b)=>(b.mainOk-a.mainOk)||(b.avail-a.avail)||(b.score-a.score)).slice(0,3).map(x=>({id:x.r.id,n:x.r.n,avail:x.avail,
+          miss:x.items.filter(it=>!isPantry(it.key)&&(stock[it.key]||0)<it.g*P).map(it=>ING[it.key].n)}));
+        day.meals.push({m,label,key,r:null,short:true,items:[],tot:Z(),tags:[],sugg,alts:[]});return;
+      }
       const s=Math.min(G.scale[1],Math.max(G.scale[0],T.k*share*(S.goal==="cut"?.8:1)/pick.base.k));
       const tot=Z();
       const items=pick.items.map(it=>{
@@ -241,7 +254,7 @@ function makePlan(){
       });
       add(day.tot,tot);
       day.meals.push({m,label,key,r:pick.r,main:pick.r.main,items,tot,batch,tags:recipeTags(pick.base),locked:!!(lk&&pick.r.id===lk),
-        alts:scored.filter(x=>x.r.id!==pick.r.id).slice(0,6).map(x=>({id:x.r.id,n:x.r.n,avail:x.avail,tags:recipeTags(x.base)}))});
+        alts:scored.filter(x=>x.r.id!==pick.r.id).sort((a,b)=>((b.avail>=OK_AVAIL&&b.mainOk)-(a.avail>=OK_AVAIL&&a.mainOk))||(b.score-a.score)).slice(0,6).map(x=>({id:x.r.id,n:x.r.n,avail:x.avail,tags:recipeTags(x.base)}))});
       hist.push({d,id:pick.r.id});
     });
 
@@ -272,32 +285,38 @@ function makePlan(){
     const has=(k,min)=>allowed(k)&&(stock[k]||0)>=min;
     if(t.fruit<1.8){ // 每天 2 份水果（每份約 120 g）
       const k=pickSlot("fruit",new Set(used)),raw=Math.min(240,Math.max(100,(2-t.fruit)*120));
-      let g=roundAmt(k,raw,10);
-      if(ING[k].u!=="g"&&g>raw+20)g-=ING[k].gpu*.5; // 以顆、根計的水果寧可少半個，不要多
-      snack(k,g,"水果");
+      if(has(k,50)){
+        let g=roundAmt(k,Math.min(raw,stock[k]/P),10);
+        if(ING[k].u!=="g"&&g>raw+20)g-=ING[k].gpu*.5; // 以顆、根計的水果寧可少半個，不要多
+        snack(k,g,"水果");
+      }
     }
     if(t.dairy<1.3){ // 乳品 1.5 杯，同時補鈣和蛋白質
       let list=(S.goal==="cut"?["yogurt","milk"]:["milk","yogurt"]).filter(k=>allowed(k)&&!used.has(k));
       if(!list.length&&allowed("soymilk")&&!used.has("soymilk"))list=["soymilk"];
       if(list.length){
-        const k=list.find(x=>has(x,100))||list[0],cup=ING[k].cup||240;
-        snack(k,roundAmt(k,Math.min(S.goal==="cut"?cup:300,Math.max(120,(1.5-t.dairy)*cup)),10),"乳品");
+        const k=list.find(x=>has(x,100)),cup=k&&(ING[k].cup||240);
+        if(k){ // 不超過冰箱剩下的量
+          const g=Math.floor(Math.min(S.goal==="cut"?cup:300,Math.max(120,(1.5-t.dairy)*cup),stock[k]/P)/10)*10;
+          if(g>=100)snack(k,g,"乳品");
+        }
       }
     }
     const pGap=T.p-t.p;
     if(pGap>T.p*(S.goal==="keep"?.2:.08)&&(S.goal!=="cut"||t.k<T.k)){
       const opt=[["egg",55],["soymilk",300],["edamame",60],["dried_tofu",60],["yogurt",150],["milk",240]].filter(([k])=>allowed(k)&&!used.has(k));
       if(opt.length){
-        const [k,g]=opt.find(([k,g])=>has(k,g*P))||opt[0];
-        snack(k,k==="egg"&&pGap>15&&S.goal==="gain"?110:g,"蛋白質");
+        const f=opt.find(([k,g])=>has(k,g*P));
+        if(f)snack(f[0],f[0]==="egg"&&pGap>15&&S.goal==="gain"?110:f[1],"蛋白質");
       }
     }
-    const filler=()=>allowed("nuts")?"nuts":"sweetpotato";
+    // 熱量不夠：用冰箱裡的堅果、地瓜、吐司補
+    const filler=()=>[["nuts",10],["sweetpotato",120],["toast",35]].find(([k,g])=>!used.has(k)&&has(k,g*P));
     if(S.goal==="gain"){
-      if(t.k<T.k*.95){const k=filler();snack(k,k==="nuts"?roundAmt(k,Math.min(40,Math.max(15,(T.k-t.k)/6)),5):150,"熱量")}
-      if(t.k<T.k*.92){const k=allowed("toast")&&has("toast",70)?"toast":"sweetpotato";if(!used.has(k))snack(k,k==="toast"?70:150,"熱量")}
+      if(t.k<T.k*.95){const f=filler();if(f)snack(f[0],f[0]==="nuts"?roundAmt("nuts",Math.min(40,Math.max(15,(T.k-t.k)/6)),5):f[0]==="toast"?70:150,"熱量")}
+      if(t.k<T.k*.92){const f=filler();if(f)snack(f[0],f[0]==="nuts"?20:f[0]==="toast"?70:150,"熱量")}
     }else if(t.k<T.k*(S.goal==="cut"?.85:.92)){
-      const k=filler();snack(k,k==="nuts"?roundAmt(k,Math.min(30,Math.max(10,(T.k-t.k)/6)),5):120,"熱量");
+      const f=filler();if(f)snack(f[0],f[0]==="nuts"?roundAmt("nuts",Math.min(30,Math.max(10,(T.k-t.k)/6)),5):f[0]==="toast"?35:120,"熱量");
     }
     days.push(day);
   }
@@ -319,8 +338,12 @@ function makePlan(){
     }
   });
 
+  const avg=Z();days.forEach(d=>add(avg,d.tot));for(const k in avg)avg[k]/=7;
+  const nutriBuy=Object.keys(NUTRI_SUGG).filter(k=>avg[k]<T[k]*.8).map(k=>({k,pct:Math.round(avg[k]/T[k]*100),
+    items:NUTRI_SUGG[k].filter(x=>allowed(x)&&!(start[x]>0)).slice(0,3)})).filter(x=>x.items.length);
   const left=Object.keys(stock).filter(k=>stock[k]>0.5).map(k=>({key:k,g:stock[k],unused:Math.abs(stock[k]-start[k])<0.5,exp:expDay[k]}));
-  return {T,P,days,buy,buyDay,waste,left,recs,self:needTotal?fromFridge/needTotal:1,expDay};
+  const nMeals=days.reduce((n,d)=>n+d.meals.filter(m=>m.r&&!m.short).length,0);
+  return {T,P,days,buy,buyDay,waste,left,recs,nutriBuy,nMeals,self:needTotal?fromFridge/needTotal:1,expDay};
 }
 
 /* ---------- 顯示 ---------- */
@@ -401,7 +424,8 @@ function renderSettings(){
 function renderInv(){
   $("ingList").innerHTML=Object.values(ING).filter(i=>i.cat!=="fat"&&!i.custom).map(i=>`<option value="${esc(i.n)}"></option>`).join("");
   $("inv-count").textContent=S.inv.length+" 項";
-  $("emptyNote").innerHTML=S.inv.length?"":`<p class="note">冰箱還是空的。加入現有的食材和到期日，菜單會優先用你有的東西；在那之前，菜單上的食材都要用買的。</p>`;
+  renderQuick();
+  $("emptyNote").innerHTML="";
   if(!S.inv.length){$("inv").innerHTML="";return}
   const groups={};
   S.inv.forEach((it,idx)=>{const c=ING[it.key].cat;(groups[c]=groups[c]||[]).push([it,idx])});
@@ -418,6 +442,12 @@ function renderInv(){
     </div>`).join("");
 }
 
+const QUICK=["egg","tofu","milk","yogurt","chicken","pork","pork_mince","beef","salmon","shrimp","cabbage","bokchoy","spinach","broccoli","carrot","tomato","onion","mushroom","sweetpotato","toast","banana","apple"];
+function renderQuick(){
+  const have=new Set(S.inv.map(i=>i.key));
+  const list=QUICK.filter(k=>!have.has(k)&&allowed(k)).slice(0,S.inv.length?12:22);
+  $("quick").innerHTML=list.length?`<span class="label">常用食材（點一下帶入）</span><div class="pills">${list.map(k=>`<button type="button" class="qpill" data-quick="${k}">${esc(ING[k].n)}</button>`).join("")}</div>`:"";
+}
 function renderTiles(){
   const {T,days,buy,self,waste}=PLAN;
   const avgK=days.reduce((s,d)=>s+d.tot.k,0)/7,avgP=days.reduce((s,d)=>s+d.tot.p,0)/7;
@@ -426,8 +456,9 @@ function renderTiles(){
   $("tiles").innerHTML=`
     <div class="tile"><span class="l">每日平均熱量</span><span class="v">${Math.round(avgK).toLocaleString()}<small> / ${T.k.toLocaleString()}</small></span></div>
     <div class="tile"><span class="l">每日平均蛋白質</span><span class="v">${Math.round(avgP)}<small> / ${T.p} g</small></span></div>
-    <div class="tile"><span class="l">食材來自冰箱</span><span class="v">${Math.round(self*100)}<small>%</small></span></div>
-    <div class="tile"><span class="l">${nWaste?"會過期沒用完":"需要補買"}</span><span class="v">${nWaste||Object.keys(buy).length}<small> 項</small></span></div>`;
+    <div class="tile"><span class="l">冰箱夠排</span><span class="v">${PLAN.nMeals}<small> / 21 餐</small></span></div>
+    <div class="tile"><span class="l">${nWaste?"會過期沒用完":"補齊用的食材"}</span><span class="v">${nWaste||Object.keys(buy).length}<small> 項</small></span></div>`;
+  $("shortNote").innerHTML=PLAN.nMeals<21?`<p class="note">冰箱的食材夠排 <b>${PLAN.nMeals} / 21</b> 餐。沒排到的餐會列出「補一兩樣就能做」的菜，點選後才會加進購物清單；也可以把更多食材加進冰箱。</p>`:"";
   $("board-note").innerHTML=(nLocks?`已鎖定 ${nLocks} 餐（<button type="button" class="linkbtn" data-unlock>全部解除</button>）・`:"")+"點菜名可以換一道，換過的會自動鎖定";
 }
 
@@ -457,6 +488,11 @@ function eatBox(key,on,label){
   return `<label class="ate${on?" on":""}" for="eat-${key}"><input type="checkbox" id="eat-${key}" data-eat="${key}" ${on?"checked":""}> ${label}</label>`;
 }
 function mealHTML(m,isToday){
+  if(m.short)return `<div class="meal short" data-m="${m.m}">
+    <div class="meal-top"><span class="mtag">${m.label}</span></div>
+    <p class="meal-empty">冰箱的食材不夠做這餐。</p>
+    <div class="alts"><span class="t">補買少量食材就能做（點選後加入菜單）</span>${m.sugg.map(a=>`<button type="button" class="alt" data-pick="${m.key}" data-id="${a.id}"><span>${esc(a.n)}<span class="need">要買：${a.miss.map(esc).join("、")||"—"}</span></span><span class="pct">${Math.round(a.avail*100)}%</span></button>`).join("")}</div>
+  </div>`;
   if(!m.r)return `<div class="meal" data-m="${m.m}"><div class="meal-top"><span class="mtag">${m.label}</span></div><p class="meal-empty">沒有符合忌口條件的菜色，請調整「不吃的食材」。</p></div>`;
   if(m.eaten)return `<div class="meal eaten" data-m="${m.m}">
     <div class="meal-top"><span class="mtag">${m.label}</span>${eatBox(m.key,true,"已吃")}</div>
@@ -531,11 +567,14 @@ function buyEntries(){
 function renderLists(){
   const b=buyEntries();
   for(const k of [...bought])if(!PLAN.buy[k])bought.delete(k);
-  $("buy").innerHTML=b.length?`<ul class="list buy">${b.map(([k,g])=>{
+  const nb=PLAN.nMeals>=15?PLAN.nutriBuy:[];
+  const nutri=nb.length?`<div class="nutri-buy"><h3>營養補貨建議</h3><ul class="list">${nb.map(x=>`<li><span>${NUTRI_NAME[x.k]} <span class="when">本週平均 ${x.pct}%</span></span><span class="amt">${x.items.map(k=>esc(ING[k].n)).join("、")}</span></li>`).join("")}</ul><p class="hint" style="margin:6px 0 0">買了之後加進冰箱，菜單會自動把它們排進去。</p></div>`:"";
+  $("buy").innerHTML=(b.length?`<h3 class="subh">補齊菜單要用的</h3><ul class="list buy">${b.map(([k,g])=>{
       const bd=PLAN.buyDay[k],life=ING[k].life,short=bd>life;
       return `<li><label for="buy-${k}"><input type="checkbox" id="buy-${k}" data-buy="${k}" ${bought.has(k)?"checked":""}><span>${esc(ING[k].n)} <span class="when">${bd===0?"今天就要用":md(dayDate(bd))+" 起要用"}</span>${short?` <span class="short">冷藏約 ${life} 天，建議 ${md(dayDate(bd-1))} 再買或買冷凍的</span>`:""}</span></label><span class="amt">${fmtBuy(k,g)}</span></li>`}).join("")}</ul>
       <div class="buy-actions"><button type="button" class="btn small" id="addBought" ${bought.size?"":"disabled"}>把勾選的加入冰箱</button><span class="hint">買好後勾起來，會用建議量加進冰箱庫存</span></div>`
-    :`<p class="empty">冰箱的食材就夠了，這週不用補買。</p>`;
+    :`<p class="empty">菜單上的菜冰箱都夠做，不用補買。</p>`)+nutri
+    +(PLAN.nMeals<15?`<p class="hint" style="margin:12px 0 0">冰箱的食材目前只夠排 ${PLAN.nMeals} 餐，營養建議等食材多一點再看比較準。</p>`:"");
   const L=PLAN.left.filter(l=>!isPantry(l.key));
   const W=Object.entries(PLAN.waste);
   $("left").innerHTML=(L.length?`<ul class="list check">${L.map(l=>`<li><span>${esc(ING[l.key].n)}${l.unused?`<span class="star" style="color:var(--muted)">未排入</span>`:""}${l.exp!=null&&l.exp<=9?`<span class="star">${md(dayDate(l.exp))} 到期</span>`:""}</span><span class="amt">${fmtAmt(l.key,l.g)}</span></li>`).join("")}</ul>`
@@ -545,7 +584,11 @@ function renderLists(){
 
 function renderPlan(){
   PLAN=makePlan();
-  renderModes();renderMemo();renderTiles();renderHeat();renderBoard();renderLists();
+  const empty=!S.inv.length;
+  $("welcome").hidden=!empty;$("planArea").hidden=empty;$("reroll").hidden=empty;
+  renderModes();renderMemo();
+  if(empty)return; // 冰箱是空的就不排菜單，先請使用者輸入食材
+  renderTiles();renderHeat();renderBoard();renderLists();
 }
 function renderAll(){renderSettings();renderInv();renderPlan()}
 function changed(){save()}
@@ -640,9 +683,16 @@ $("addForm").addEventListener("submit",e=>{
     S.custom.push(c);registerCustom(c);i=ING[c.key];
   }
   addToInv(i.key,qty,exp);
-  $("addName").value="";$("addQty").value="";$("addExp").value="";
+  $("addName").value="";$("addQty").value="";$("addExp").value="";$("addQty").placeholder="數量";
   metaHint(`<span class="hint">已加入 ${esc(i.n)} ${qty} ${i.u}</span>`);
   changed(true);renderInv();renderPlan();$("addName").focus();
+});
+$("quick").addEventListener("click",e=>{
+  const b=e.target.closest("[data-quick]");if(!b)return;
+  const i=ING[b.dataset.quick];
+  $("addName").value=i.n;$("addName").dispatchEvent(new Event("input"));
+  $("addQty").placeholder=i.u==="g"||i.u==="ml"?"數量（"+i.u+"）":"幾"+i.u;
+  $("addQty").focus();
 });
 $("inv").addEventListener("change",e=>{
   const q=e.target.dataset.q,x=e.target.dataset.e;

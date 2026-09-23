@@ -71,6 +71,7 @@
           </div>
         </form>
         <datalist id="ingList"></datalist>
+        <div class="quick" id="quick"></div>
         <div id="emptyNote"></div>
         <div class="inv" id="inv"></div>
         <div class="inv-actions">
@@ -80,6 +81,16 @@
     </aside>
 
     <main class="main">
+      <section class="sheet taped welcome" id="welcome" style="--tape:var(--tape-y)" hidden>
+        <h2>先告訴我冰箱裡有什麼</h2>
+        <ol class="steps">
+          <li>在「冰箱現有食材」輸入食材、數量和到期日；也可以點常用食材快速帶入。</li>
+          <li>菜單只會排冰箱做得出來的菜，快到期的先用。</li>
+          <li>冰箱不夠的那幾餐，會告訴你「補一兩樣就能做」的選擇，要不要買由你決定。</li>
+        </ol>
+      </section>
+      <div class="plan-area" id="planArea">
+      <div id="shortNote"></div>
       <div class="tiles" id="tiles"></div>
 
       <section class="sec" aria-labelledby="heat-h">
@@ -110,6 +121,7 @@
       <section class="lists">
         <div class="sheet taped" style="--tape:var(--tape-y)">
           <h2>購物清單 <button class="btn small" type="button" id="copyBuy">複製清單</button></h2>
+          <p class="hint" style="margin:-4px 0 8px">菜單以冰箱現有的食材為主，這裡只列出少量補齊用的食材和營養建議。</p>
           <div id="buy"></div>
         </div>
         <div class="sheet taped" style="--tape:var(--tape-g)">
@@ -118,6 +130,7 @@
         </div>
       </section>
 
+      </div>
       <p class="foot" id="foot"></p>
     </main>
   </div>
