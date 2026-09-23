@@ -1,0 +1,876 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>冰箱週菜單</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@300;400;700&family=Patrick+Hand&display=swap">
+<style>
+:root{
+  --paper:#F7F3E8;--dot:#D6CDB8;--sheet:#FFFDF7;--sheet-2:#F4EEDF;
+  --ink:#2B3552;--muted:#6B6F84;--line:#D9CFBA;--rule:#E7DFCC;
+  --tape-y:#F2D98A;--tape-p:#F1C6C2;--tape-g:#BCD4B1;--tape-b:#B9D5E4;
+  --red:#C24A35;--green:#3F7F50;--amber:#9A6A12;
+  --hl-good:#C6E3B8;--hl-ok:#F7E29A;--hl-bad:#F6BDB1;
+  --shadow:rgba(43,53,82,.10);
+  --hand:"LXGW WenKai TC","Kaiti TC","STKaiti","KaiTi","PingFang TC",serif;
+  --num:"Patrick Hand","LXGW WenKai TC","Comic Sans MS",cursive;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --paper:#1C1F2C;--dot:#323749;--sheet:#242838;--sheet-2:#2B3042;
+    --ink:#ECE5D4;--muted:#A8A7B6;--line:#3B4056;--rule:#30354A;
+    --tape-y:#7A6831;--tape-p:#7A4F57;--tape-g:#4F6B53;--tape-b:#42606F;
+    --red:#F08A73;--green:#8FCB98;--amber:#E6B45E;
+    --hl-good:#3D5E45;--hl-ok:#6A5827;--hl-bad:#733F38;
+    --shadow:rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --paper:#1C1F2C;--dot:#323749;--sheet:#242838;--sheet-2:#2B3042;
+  --ink:#ECE5D4;--muted:#A8A7B6;--line:#3B4056;--rule:#30354A;
+  --tape-y:#7A6831;--tape-p:#7A4F57;--tape-g:#4F6B53;--tape-b:#42606F;
+  --red:#F08A73;--green:#8FCB98;--amber:#E6B45E;
+  --hl-good:#3D5E45;--hl-ok:#6A5827;--hl-bad:#733F38;
+  --shadow:rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+body{margin:0;color:var(--ink);font-family:var(--hand);font-size:15px;line-height:1.6;
+  background-color:var(--paper);
+  background-image:radial-gradient(var(--dot) 1.1px,transparent 1.4px);background-size:20px 20px}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px dashed var(--ink);outline-offset:2px}
+.n{font-family:var(--num);font-variant-numeric:tabular-nums;letter-spacing:.02em}
+
+.wrap{max-width:1380px;margin:0 auto;padding-inline:20px;padding-block:30px 56px}
+@media (max-width:520px){.wrap{padding-inline:16px;padding-block:20px 40px}}
+
+/* 封面 */
+.cover{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:18px}
+.cover h1{font-weight:700;font-size:clamp(32px,5vw,48px);line-height:1.05;margin:0;letter-spacing:.04em;display:inline;
+  background:linear-gradient(transparent 62%,var(--tape-y) 62%,var(--tape-y) 92%,transparent 92%);padding-inline:4px}
+.lede{margin:10px 0 0;color:var(--muted);max-width:60ch}
+.stamp{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid var(--red);color:var(--red);
+  border-radius:8px;padding:4px 12px;transform:rotate(-4deg);font-family:var(--num);line-height:1.1;margin-left:14px;vertical-align:10px}
+.stamp b{font-size:20px;font-weight:400}.stamp small{font-size:13px}
+.btn{border:1.5px solid var(--ink);background:var(--sheet);border-radius:6px;padding:6px 14px;box-shadow:2px 2px 0 var(--ink)}
+.btn:hover{transform:translate(-1px,-1px);box-shadow:3px 3px 0 var(--ink)}
+.btn:active{transform:translate(1px,1px);box-shadow:1px 1px 0 var(--ink)}
+.btn.primary{background:var(--tape-y);font-weight:700}
+.btn.small{padding:2px 10px;font-size:13.5px;box-shadow:1.5px 1.5px 0 var(--ink)}
+.btn.danger{color:var(--red);border-color:var(--red);box-shadow:1.5px 1.5px 0 var(--red)}
+
+/* 模式索引標籤 */
+.modes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;align-items:end;border-bottom:1.5px solid var(--ink);margin-bottom:0}
+.mode{position:relative;text-align:left;border:1.5px solid var(--ink);border-bottom:0;border-radius:12px 12px 0 0;padding:10px 14px 8px;
+  background:var(--tab);opacity:.78;display:flex;flex-direction:column;gap:0;min-width:0}
+.mode:hover{opacity:1}
+.mode[aria-selected="true"]{opacity:1;padding-top:16px;margin-bottom:-1.5px;padding-bottom:10px;background:var(--tab)}
+.mode .mn{font-size:22px;font-weight:700;line-height:1.15}
+.mode .ms{font-size:13px;color:var(--ink);opacity:.8}
+.mode .mk{font-family:var(--num);font-size:15px}
+.mode[data-goal="cut"]{--tab:var(--tape-b)}
+.mode[data-goal="keep"]{--tab:var(--tape-g)}
+.mode[data-goal="gain"]{--tab:var(--tape-p)}
+@media (max-width:560px){.mode .ms{display:none}.mode .mn{font-size:19px}}
+.memo{background:var(--sheet);border:1.5px solid var(--ink);border-top:0;border-radius:0 0 10px 10px;padding:14px 18px 16px;margin-bottom:26px;
+  display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:8px 28px;
+  background-image:repeating-linear-gradient(transparent 0 27px,var(--rule) 27px 28px);background-position:0 12px}
+@media (max-width:860px){.memo{grid-template-columns:minmax(0,1fr)}}
+.memo h3{margin:0 0 2px;font-size:16px}
+.memo ul{margin:0;padding-left:1.2em;line-height:28px}
+.memo li::marker{content:"✓  ";color:var(--green)}
+.recs{display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start}
+.rec{background:var(--sheet);border:1px solid var(--line);border-radius:4px;padding:1px 8px;font-size:14px;line-height:1.6}
+.rec .n{color:var(--muted);font-size:13px;margin-left:4px}
+
+.layout{display:grid;grid-template-columns:330px minmax(0,1fr);gap:26px;align-items:start}
+@media (max-width:1000px){.layout{grid-template-columns:minmax(0,1fr)}}
+.side{display:flex;flex-direction:column;gap:24px;min-width:0}
+.main{display:flex;flex-direction:column;gap:26px;min-width:0}
+
+.sheet{position:relative;background:var(--sheet);border:1px solid var(--line);border-radius:4px;padding:20px 16px 16px;box-shadow:2px 3px 0 var(--shadow)}
+.taped::before{content:"";position:absolute;top:-11px;left:50%;width:96px;height:22px;transform:translateX(-50%) rotate(-2.5deg);
+  background:var(--tape,var(--tape-y));opacity:.9;
+  clip-path:polygon(0 8%,4% 0,8% 10%,12% 0,88% 0,92% 10%,96% 0,100% 8%,100% 92%,96% 100%,92% 90%,88% 100%,12% 100%,8% 90%,4% 100%,0 92%)}
+.sheet h2{font-size:19px;margin:0 0 12px;font-weight:700;display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.label{font-size:13px;color:var(--muted);letter-spacing:.06em}
+
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field{display:flex;flex-direction:column;gap:2px;min-width:0}
+.field label{font-size:13px;color:var(--muted)}
+.field input,.field select,.add input,.add select,.qty{background:transparent;border:0;border-bottom:1.5px dashed var(--line);border-radius:0;padding:3px 2px;min-width:0;width:100%}
+.field input:focus,.add input:focus,.qty:focus{border-bottom-color:var(--ink);outline:none}
+.check{grid-column:1/-1;display:flex;gap:8px;align-items:flex-start;font-size:14px}
+.check input{margin-top:5px;accent-color:var(--green)}
+.targets{margin-top:12px;padding-top:10px;border-top:1px dashed var(--line);font-size:14px;color:var(--muted);line-height:1.75}
+.targets b{color:var(--ink);font-weight:400;font-family:var(--num);font-size:16px}
+
+.add{display:grid;grid-template-columns:minmax(0,1fr) 70px auto;gap:8px;align-items:end}
+.add .row2{grid-column:1/-1;display:flex;gap:8px;align-items:center;min-height:24px}
+.add .row2 select{flex:1}
+.hint{font-size:13px;color:var(--muted)}
+.note{font-size:14px;background:var(--tape-y);border-radius:2px;padding:8px 12px;margin:12px 0 0;transform:rotate(-.6deg);box-shadow:1px 2px 0 var(--shadow)}
+.inv{margin-top:12px;display:flex;flex-direction:column;gap:12px}
+.inv-cat .label{display:block;border-bottom:1px solid var(--rule);margin-bottom:2px}
+.inv-row{display:grid;grid-template-columns:minmax(0,1fr) 62px 28px auto auto;gap:6px;align-items:center;min-height:30px}
+.inv-row .nm{overflow-wrap:anywhere}
+.inv-row .u{font-size:13px;color:var(--muted)}
+.qty{text-align:right;font-family:var(--num);font-size:16px}
+.icon-btn{border:1px solid transparent;background:none;border-radius:4px;padding:0 6px;font-size:13px;color:var(--muted)}
+.icon-btn:hover{border-color:var(--line)}
+.prio-btn[aria-pressed="true"]{color:var(--ink);background:linear-gradient(transparent 40%,var(--tape-y) 40%);font-weight:700}
+.inv-actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+
+/* 摘要 */
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+@media (max-width:760px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tile{background:var(--sheet);border:1px solid var(--line);border-radius:3px;padding:10px 14px;box-shadow:2px 3px 0 var(--shadow);display:flex;flex-direction:column}
+.tile:nth-child(odd){transform:rotate(-.5deg)}.tile:nth-child(even){transform:rotate(.4deg)}
+.tile .v{font-family:var(--num);font-size:30px;line-height:1.15}
+.tile .v small{font-size:16px;color:var(--muted)}
+.tile .l{font-size:13.5px;color:var(--muted)}
+
+.sec{display:flex;flex-direction:column;gap:12px}
+.sec-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.sec-head h2{margin:0;font-size:26px;font-weight:700;display:inline;background:linear-gradient(transparent 60%,var(--tab-c,var(--tape-g)) 60%,var(--tab-c,var(--tape-g)) 90%,transparent 90%);padding-inline:3px}
+.sec-head .aside{font-size:14px;color:var(--muted)}
+
+.scroll{overflow-x:auto;background:var(--sheet);border:1px solid var(--line);border-radius:3px;box-shadow:2px 3px 0 var(--shadow)}
+table.heat{border-collapse:collapse;width:100%;min-width:780px;font-size:14px}
+.heat th,.heat td{padding:5px 8px;text-align:center;border-bottom:1px solid var(--rule);white-space:nowrap}
+.heat tr:last-child td,.heat tr:last-child th{border-bottom:0}
+.heat thead th{font-weight:400;color:var(--muted);font-size:13.5px;border-bottom:1.5px solid var(--ink)}
+.heat thead th .n{font-size:16px;color:var(--ink)}
+.heat th[scope="row"]{text-align:left;font-weight:700}
+.heat th[scope="row"] small{color:var(--muted);font-weight:400;margin-left:4px;font-size:12.5px}
+.heat td.tg{color:var(--muted);font-family:var(--num);font-size:15px}
+.heat td.c{font-family:var(--num);font-size:16px}
+.heat td.avg{border-left:1.5px dashed var(--line);font-weight:700}
+.hl{padding:0 5px;background:linear-gradient(transparent 38%,var(--hl) 38%,var(--hl) 88%,transparent 88%)}
+.s-good{--hl:var(--hl-good)}.s-ok{--hl:var(--hl-ok)}.s-low,.s-high{--hl:var(--hl-bad)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13.5px;color:var(--muted)}
+
+/* 週計畫 */
+.board{display:flex;flex-direction:column;gap:18px}
+.day{position:relative;display:grid;grid-template-columns:74px repeat(3,minmax(0,1fr)) 230px;gap:12px;background:var(--sheet);border:1px solid var(--line);border-radius:4px;padding:16px;box-shadow:2px 3px 0 var(--shadow)}
+.day:nth-child(4n+1){--tape:var(--tape-y)}.day:nth-child(4n+2){--tape:var(--tape-b)}.day:nth-child(4n+3){--tape:var(--tape-p)}.day:nth-child(4n){--tape:var(--tape-g)}
+.day::before{left:52px}
+@media (max-width:1280px){
+  .day{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .dayhead{grid-column:1/-1;flex-direction:row!important;gap:12px!important;justify-content:flex-start!important}
+  .dayside{grid-column:1/-1}
+}
+@media (max-width:680px){.day{grid-template-columns:minmax(0,1fr)}}
+.dayhead{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:2px}
+.datecirc{width:62px;height:62px;border:1.5px solid var(--ink);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+.datecirc .mo{font-family:var(--num);font-size:13px;color:var(--muted)}
+.datecirc .dd{font-family:var(--num);font-size:28px}
+.dayhead .wd{font-size:16px;font-weight:700}
+.dayhead .today{font-size:12.5px;color:var(--red);border:1.5px solid var(--red);border-radius:3px;padding:0 5px;transform:rotate(-4deg)}
+
+.meal{display:flex;flex-direction:column;gap:6px;min-width:0;padding:4px 12px 8px;border-left:1.5px dashed var(--line)}
+@media (max-width:1280px){.meal:nth-child(2){border-left:0;padding-left:0}}
+@media (max-width:680px){.meal{border-left:0;padding-left:0;border-top:1.5px dashed var(--line);padding-top:10px}.meal:nth-child(2){border-top:0;padding-top:4px}}
+.meal.overridden .dish{background:linear-gradient(transparent 60%,var(--tape-y) 60%)}
+.meal-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.mtag{font-size:13px;padding:0 8px;background:var(--mt);border-radius:2px}
+.meal[data-m="B"]{--mt:var(--tape-y)}.meal[data-m="L"]{--mt:var(--tape-g)}.meal[data-m="D"]{--mt:var(--tape-b)}
+.meal-top .kc{font-family:var(--num);font-size:14px;color:var(--muted)}
+.dish{font-size:21px;font-weight:700;line-height:1.25;background:none;border:0;padding:0;text-align:left;display:flex;flex-wrap:wrap;gap:2px 8px;align-items:baseline;align-self:flex-start}
+.dish .caret{font-size:13px;color:var(--muted);font-weight:400;white-space:nowrap;border-bottom:1px dashed var(--muted)}
+.dish:hover .caret{color:var(--ink)}
+.parts{color:var(--muted);font-size:13.5px;margin-top:-4px}
+.tags{display:flex;gap:5px;flex-wrap:wrap}
+.tag{font-size:12px;border:1px solid var(--green);color:var(--green);border-radius:999px;padding:0 7px;line-height:1.55}
+.chips{display:flex;flex-wrap:wrap;gap:4px 6px}
+.chip{font-size:13.5px;line-height:1.5;white-space:nowrap}
+.chip .n{font-size:15px;color:var(--muted)}
+.chip::after{content:"・";color:var(--line);margin-left:6px}
+.chip:last-child::after{content:""}
+.chip.pantry{color:var(--muted)}
+.chip.prio{background:linear-gradient(transparent 45%,var(--tape-y) 45%)}
+.chip.part,.chip.miss{color:var(--red)}
+.chip.part .n,.chip.miss .n{color:var(--red)}
+.chip .x{display:inline-block;border:1.2px solid var(--red);border-radius:50%;width:18px;height:18px;line-height:15px;text-align:center;font-size:11.5px;margin-left:2px;vertical-align:1px}
+.alts{display:flex;flex-direction:column;gap:0;border-top:1px dashed var(--line);padding-top:6px;margin-top:2px}
+.alts .t{font-size:12.5px;color:var(--muted)}
+.alt{display:flex;justify-content:space-between;gap:8px;background:none;border:0;border-bottom:1px solid var(--rule);padding:3px 2px;text-align:left}
+.alt:hover{background:var(--sheet-2)}
+.alt .pct{font-family:var(--num);font-size:15px;color:var(--muted);white-space:nowrap}
+.alt .tg2{font-size:11.5px;color:var(--green);margin-left:6px}
+
+.dayside{display:flex;flex-direction:column;gap:8px;font-size:14px;min-width:0;background:var(--sheet-2);border-radius:3px;padding:10px 12px;
+  background-image:repeating-linear-gradient(transparent 0 25px,var(--rule) 25px 26px)}
+.dayside .blk{display:flex;flex-direction:column;gap:3px}
+.dayside .tot{font-family:var(--num);font-size:24px;line-height:1.1}
+.dayside .tot small{font-size:15px;color:var(--muted)}
+.macro{display:flex;height:9px;border:1px solid var(--ink);border-radius:2px;overflow:hidden;background:var(--sheet)}
+.macro span{display:block;height:100%}
+.macro .mp{background:var(--tape-p)}.macro .mf{background:var(--tape-y)}.macro .mc{background:var(--tape-g)}
+.mlegend{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:13px}
+.mlegend i{display:inline-block;width:9px;height:9px;border:1px solid var(--ink);margin-right:4px}
+.flags{display:flex;flex-wrap:wrap;gap:6px}
+.flag{font-size:12.5px;padding:0 6px;border:1.5px solid var(--red);color:var(--red);border-radius:3px;transform:rotate(-1.5deg)}
+.flag.ok{border-color:var(--green);color:var(--green);transform:rotate(1deg)}
+
+.lists{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
+@media (max-width:760px){.lists{grid-template-columns:minmax(0,1fr)}}
+.list{display:flex;flex-direction:column;margin:0;padding:0;list-style:none}
+.list li{display:flex;justify-content:space-between;gap:10px;line-height:30px;border-bottom:1px solid var(--rule)}
+.list li:last-child{border-bottom:0}
+.list li::before{content:"□";margin-right:8px;color:var(--muted)}
+.list li>span:first-child{flex:1}
+.list .amt{font-family:var(--num);font-size:16px;color:var(--muted);white-space:nowrap}
+.list .star{font-size:12.5px;margin-left:6px;color:var(--amber)}
+.empty{color:var(--muted);font-size:14px;margin:0}
+textarea.copybox{width:100%;min-height:120px;margin-top:8px;background:var(--sheet-2);border:1px solid var(--line);border-radius:3px;padding:8px;font-family:var(--hand);font-size:14px;color:var(--ink)}
+.foot{font-size:13.5px;color:var(--muted);max-width:90ch;margin:0;line-height:1.75}
+@media (prefers-reduced-motion:reduce){.btn:hover,.btn:active{transform:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="cover">
+    <div>
+      <h1>冰箱週菜單</h1><span class="stamp" id="stamp"></span>
+      <p class="lede">寫下冰箱裡有什麼，選一個目標，自動排好 7 天早、午、晚餐與加餐，份量依你的熱量調整，並對照每日營養建議檢查缺口。</p>
+    </div>
+    <button id="reroll" class="btn primary" type="button">重新排菜單</button>
+  </header>
+
+  <div class="modes" role="tablist" aria-label="飲食目標" id="modes"></div>
+  <section class="memo" id="memo" role="tabpanel"></section>
+
+  <div class="layout">
+    <aside class="side">
+      <section class="sheet taped" style="--tape:var(--tape-b)" aria-labelledby="set-h">
+        <h2 id="set-h">個人設定 <span class="label">19–50 歲</span></h2>
+        <div class="form-grid">
+          <div class="field"><label for="sex">性別</label>
+            <select id="sex"><option value="f">女性</option><option value="m">男性</option></select></div>
+          <div class="field"><label for="weight">體重（kg）</label>
+            <input id="weight" type="number" min="30" max="150" step="1" inputmode="numeric"></div>
+          <div class="field"><label for="act">活動量</label>
+            <select id="act">
+              <option value="25">久坐少動</option><option value="30">輕度活動</option>
+              <option value="35">中度活動</option><option value="40">重度活動</option>
+            </select></div>
+          <div class="field"><label for="people">用餐人數</label>
+            <input id="people" type="number" min="1" max="10" step="1" inputmode="numeric"></div>
+          <label class="check" for="staples"><input id="staples" type="checkbox"> 白米、麵條、燕麥視為常備乾貨（不必列在冰箱裡）</label>
+        </div>
+        <div class="targets" id="targets"></div>
+      </section>
+
+      <section class="sheet taped" style="--tape:var(--tape-p)" aria-labelledby="fr-h">
+        <h2 id="fr-h">冰箱現有食材 <span class="label" id="inv-count"></span></h2>
+        <form class="add" id="addForm" autocomplete="off">
+          <input id="addName" list="ingList" placeholder="食材，例如：雞蛋" aria-label="食材名稱">
+          <input id="addQty" type="number" min="0" step="any" placeholder="數量" aria-label="數量" inputmode="decimal">
+          <button class="btn small" type="submit">加入</button>
+          <div class="row2" id="addMeta"><span class="hint">單位會依食材自動帶入</span></div>
+        </form>
+        <datalist id="ingList"></datalist>
+        <div id="sampleNote"></div>
+        <div class="inv" id="inv"></div>
+        <div class="inv-actions">
+          <button class="btn small" type="button" id="loadSample">載入範例食材</button>
+          <button class="btn small danger" type="button" id="clearInv">清空冰箱</button>
+        </div>
+      </section>
+    </aside>
+
+    <main class="main">
+      <div class="tiles" id="tiles"></div>
+
+      <section class="sec" aria-labelledby="heat-h">
+        <div class="sec-head">
+          <h2 id="heat-h">營養打卡</h2>
+          <div class="legend">
+            <span><span class="hl s-good">綠</span> 達標</span>
+            <span><span class="hl s-ok">黃</span> 接近（80–99%）</span>
+            <span><span class="hl s-low">紅</span> 不足或超標</span>
+          </div>
+        </div>
+        <div class="scroll"><table class="heat" id="heat"></table></div>
+      </section>
+
+      <section class="sec" aria-labelledby="board-h">
+        <div class="sec-head">
+          <h2 id="board-h">一週菜單</h2>
+          <span class="aside" id="board-note"></span>
+        </div>
+        <div class="board" id="board"></div>
+      </section>
+
+      <section class="lists">
+        <div class="sheet taped" style="--tape:var(--tape-y)">
+          <h2>購物清單 <button class="btn small" type="button" id="copyBuy">複製清單</button></h2>
+          <div id="buy"></div>
+        </div>
+        <div class="sheet taped" style="--tape:var(--tape-g)">
+          <h2>一週後冰箱剩下</h2>
+          <div id="left"></div>
+        </div>
+      </section>
+
+      <p class="foot" id="foot"></p>
+    </main>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------- 食材資料庫（每 100 g 可食部分） ---------- */
+const CATS={eggsoy:"蛋・豆製品",meat:"肉類",sea:"海鮮",dairy:"乳品",grain:"全穀雜糧",leafy:"葉菜類",veg:"其他蔬菜",mush:"菇類",fruit:"水果",nut:"堅果種子"};
+// key, 名稱, 分類, 單位, 每單位克數, 熱量kcal, 蛋白質g, 脂肪g, 醣類g, 纖維g, 鈣mg, 鐵mg, 維Cmg, [1 杯乳品的克數]
+const RAW=[
+["egg","雞蛋","eggsoy","顆",55,138,12.5,9.2,1.0,0,50,1.8,0],
+["tofu","板豆腐","eggsoy","g",1,88,8.5,3.4,6.0,0.6,140,2.0,0],
+["dried_tofu","豆干","eggsoy","g",1,190,17.4,9.0,6.0,1.5,685,5.6,0],
+["soymilk","無糖豆漿","eggsoy","ml",1,35,3.6,1.9,0.7,1.3,14,0.6,0],
+["chicken","雞胸肉","meat","g",1,104,22.4,1.5,0,0,5,0.4,0],
+["chicken_thigh","去骨雞腿","meat","g",1,157,18.5,8.7,0,0,8,0.9,0],
+["pork","豬里肌","meat","g",1,145,21.0,6.2,0,0,5,0.8,0],
+["pork_mince","豬絞肉","meat","g",1,250,17.0,20.0,0,0,8,1.0,0],
+["beef","牛肉片","meat","g",1,200,19.0,13.5,0,0,6,2.3,0],
+["salmon","鮭魚","sea","g",1,200,20.0,13.0,0,0,10,0.4,0],
+["fish","鯛魚片","sea","g",1,96,20.0,1.6,0,0,20,0.3,0],
+["shrimp","蝦仁","sea","g",1,85,19.0,0.8,0.5,0,80,1.0,0],
+["milk","鮮奶","dairy","ml",1,63,3.1,3.6,4.8,0,105,0.1,1,240],
+["yogurt","無糖優格","dairy","g",1,70,3.8,3.3,6.0,0,120,0.1,1,210],
+["cheese","起司片","dairy","片",20,300,18.0,24.0,4.0,0,600,0.3,0,45],
+["rice","白米（生）","grain","g",1,352,7.0,0.6,78.0,0.6,5,0.3,0],
+["noodles","乾麵條","grain","g",1,350,11.0,1.5,74.0,2.0,20,1.0,0],
+["oats","燕麥片","grain","g",1,389,13.0,7.0,66.0,10.0,50,4.5,0],
+["toast","全麥吐司","grain","片",35,260,10.0,4.0,47.0,5.0,60,1.5,0],
+["sweetpotato","地瓜","grain","g",1,121,1.3,0.2,28.0,2.5,30,0.4,20],
+["potato","馬鈴薯","grain","g",1,77,2.6,0.2,16.0,1.3,5,0.4,25],
+["corn","玉米粒","grain","g",1,90,3.3,1.2,19.0,2.4,3,0.5,6],
+["cabbage","高麗菜","leafy","g",1,23,1.3,0.1,4.8,1.1,47,0.3,33],
+["bokchoy","青江菜","leafy","g",1,13,1.2,0.2,2.0,1.5,100,1.0,22],
+["spinach","菠菜","leafy","g",1,18,2.2,0.3,2.4,1.9,77,2.9,10],
+["sweetleaf","地瓜葉","leafy","g",1,30,3.3,0.6,4.4,3.1,105,1.5,19],
+["broccoli","青花菜","veg","g",1,28,3.7,0.2,4.4,3.1,44,0.7,75],
+["carrot","紅蘿蔔","veg","g",1,37,1.0,0.2,8.5,2.6,30,0.4,4],
+["tomato","番茄","veg","g",1,19,0.8,0.2,4.0,1.0,10,0.3,20],
+["onion","洋蔥","veg","g",1,40,1.0,0.1,9.0,1.4,20,0.2,5],
+["greenpepper","青椒","veg","g",1,22,0.9,0.2,4.5,2.0,10,0.3,80],
+["eggplant","茄子","veg","g",1,25,1.2,0.2,5.0,2.5,15,0.4,3],
+["cucumber","小黃瓜","veg","g",1,13,0.9,0.2,2.5,1.3,25,0.3,10],
+["mushroom","香菇","mush","g",1,39,3.0,0.3,7.6,3.8,2,0.6,0],
+["shimeji","鴻喜菇","mush","g",1,30,2.7,0.3,6.0,2.8,2,0.8,0],
+["banana","香蕉","fruit","根",100,90,1.3,0.2,23.0,1.6,5,0.3,10],
+["apple","蘋果","fruit","顆",200,50,0.2,0.1,13.5,1.5,4,0.1,4],
+["guava","芭樂","fruit","顆",180,38,0.8,0.1,9.5,3.0,5,0.1,80],
+["orange","柳丁","fruit","顆",130,45,0.8,0.2,11.0,2.0,30,0.2,40],
+["nuts","綜合堅果","nut","g",1,600,20.0,52.0,20.0,8.0,100,3.0,0],
+["oil","食用油","fat","g",1,884,0,100,0,0,0,0,0]
+];
+const ING={};
+RAW.forEach(r=>{ING[r[0]]={key:r[0],n:r[1],cat:r[2],u:r[3],gpu:r[4],k:r[5],p:r[6],f:r[7],c:r[8],fb:r[9],ca:r[10],fe:r[11],vc:r[12],cup:r[13]||0}});
+// 自訂食材只能是可替換的類別，營養素用類別平均值
+const CUSTOM_BASE={leafy:[20,1.5,.2,3.5,2,80,1.2,25],veg:[30,1.2,.2,6,2,25,.4,20],mush:[30,3,.3,6,3,3,.8,0],fruit:[55,.6,.2,14,2,10,.2,30]};
+const SLOT_DEFAULT={leafy:"bokchoy",veg:"carrot",mush:"mushroom",fruit:"banana"};
+const STAPLES=["rice","noodles","oats"];
+const VEG_CATS=["leafy","veg","mush"];
+
+/* ---------- 菜色（每人份，生重 g；@類別 = 該類任一食材） ---------- */
+const R=(id,m,n,d,items)=>({id,m,n,d,items,main:items[0][0]});
+const RECIPES=[
+R("b1","B","起司蛋吐司","全麥吐司・煎蛋・起司片・水果",[["toast",70],["egg",55],["cheese",20],["@fruit",100],["oil",3]]),
+R("b2","B","燕麥牛奶碗","燕麥・鮮奶・水果・堅果",[["oats",40],["milk",240],["@fruit",100],["nuts",10]]),
+R("b3","B","地瓜蛋豆漿","蒸地瓜・水煮蛋・無糖豆漿",[["sweetpotato",150],["egg",55],["soymilk",300]]),
+R("b4","B","優格燕麥杯","無糖優格・燕麥・水果・堅果",[["yogurt",150],["oats",30],["@fruit",120],["nuts",10]]),
+R("b5","B","蔬菜烘蛋吐司","蔬菜烘蛋・全麥吐司",[["egg",110],["@veg",80],["toast",70],["oil",5]]),
+R("b6","B","雞胸三明治","全麥吐司・雞胸肉・番茄・小黃瓜・鮮奶",[["chicken",60],["toast",70],["tomato",40],["cucumber",30],["milk",200]]),
+R("b7","B","蔬菜肉末粥","白粥・豬絞肉・蛋花・青菜",[["pork_mince",30],["rice",40],["egg",55],["@leafy",60]]),
+R("b8","B","香蕉鮮奶早餐","香蕉・鮮奶・水煮蛋・吐司",[["egg",55],["banana",100],["milk",240],["toast",35]]),
+R("b9","B","豆漿燕麥","無糖豆漿煮燕麥・水果・堅果",[["soymilk",300],["oats",40],["@fruit",100],["nuts",8]]),
+R("b10","B","馬鈴薯蛋沙拉三明治","馬鈴薯・蛋・小黃瓜・優格醬・吐司",[["egg",55],["potato",80],["cucumber",30],["yogurt",30],["toast",70]]),
+R("b11","B","菇菇蛋捲飯糰","鮮菇蛋捲・小飯糰・豆漿",[["egg",110],["@mush",50],["rice",45],["soymilk",240],["oil",4]]),
+R("b12","B","雞胸優格碗","雞胸肉・優格・小黃瓜番茄・地瓜",[["chicken",80],["yogurt",120],["cucumber",50],["tomato",60],["sweetpotato",100]]),
+
+R("l1","LD","番茄炒蛋定食","番茄炒蛋・炒青菜・白飯",[["egg",110],["tomato",150],["@leafy",150],["rice",80],["oil",10]]),
+R("l2","LD","三杯雞定食","三杯雞腿・炒青菜・白飯",[["chicken_thigh",150],["@leafy",150],["@mush",40],["rice",80],["oil",12]]),
+R("l3","LD","青椒肉絲定食","青椒肉絲・清炒高麗菜・白飯",[["pork",100],["greenpepper",100],["carrot",30],["cabbage",120],["rice",80],["oil",10]]),
+R("l4","LD","麻婆豆腐定食","麻婆豆腐・燙青菜・白飯",[["tofu",200],["pork_mince",50],["@leafy",150],["rice",80],["oil",10]]),
+R("l5","LD","鹽烤鮭魚盤","鹽烤鮭魚・烤青花菜・烤地瓜",[["salmon",120],["broccoli",120],["sweetpotato",150],["oil",5]]),
+R("l6","LD","清蒸鯛魚定食","清蒸鯛魚・燙青菜・紅蘿蔔絲・白飯",[["fish",150],["@leafy",150],["carrot",40],["rice",80],["oil",6]]),
+R("l7","LD","蝦仁炒蛋定食","蝦仁炒蛋・蒜炒青花菜・白飯",[["shrimp",80],["egg",55],["broccoli",120],["rice",80],["oil",10]]),
+R("l8","LD","洋蔥牛肉定食","洋蔥炒牛肉・燙青菜・白飯",[["beef",120],["onion",100],["@leafy",150],["rice",80],["oil",10]]),
+R("l9","LD","日式咖哩雞","咖哩雞・馬鈴薯紅蘿蔔・燙青菜・白飯",[["chicken",120],["potato",100],["carrot",50],["onion",50],["@leafy",100],["rice",70],["oil",10]]),
+R("l10","LD","番茄牛肉麵","番茄燉牛肉・青菜・麵條",[["beef",100],["tomato",150],["noodles",90],["@leafy",100],["onion",30],["oil",5]]),
+R("l11","LD","豆干肉絲定食","豆干炒肉絲・炒青菜・白飯",[["dried_tofu",80],["pork",60],["carrot",30],["@leafy",150],["rice",80],["oil",10]]),
+R("l12","LD","高麗菜肉末炒飯","高麗菜肉末蛋炒飯・蔬菜湯",[["pork_mince",40],["rice",90],["egg",55],["cabbage",100],["carrot",30],["corn",30],["@veg",80],["oil",12]]),
+R("l13","LD","雞肉蔬菜湯麵","雞胸肉・青菜・鮮菇・麵條",[["chicken",100],["noodles",80],["@leafy",150],["@mush",50],["carrot",30],["oil",3]]),
+R("l14","LD","香菇雞湯定食","香菇雞湯・炒青菜・白飯",[["chicken_thigh",120],["mushroom",60],["@leafy",150],["rice",80],["oil",6]]),
+R("l15","LD","肉末茄子定食","肉末茄子・蒸蛋・燙青菜・白飯",[["pork_mince",60],["eggplant",150],["egg",55],["@leafy",100],["rice",80],["oil",12]]),
+R("l16","LD","蒜炒蝦仁青花","蒜炒蝦仁青花菜・玉米・白飯",[["shrimp",120],["broccoli",150],["corn",50],["rice",80],["oil",8]]),
+R("l17","LD","馬鈴薯燉肉","馬鈴薯燉豬肉・燙青菜・半碗飯",[["pork",100],["potato",150],["carrot",60],["onion",60],["@leafy",100],["rice",40],["oil",8]]),
+R("l18","LD","豆腐鮮菇煲","豆腐鮮菇煲・高麗菜・白飯",[["tofu",200],["cabbage",100],["@mush",60],["carrot",30],["egg",55],["rice",80],["oil",6]]),
+R("l19","LD","滷雞腿便當","滷雞腿・滷蛋・滷豆干・炒高麗菜",[["chicken_thigh",150],["egg",55],["dried_tofu",40],["cabbage",150],["rice",80],["oil",6]]),
+R("l20","LD","香煎鯛魚地瓜飯","香煎鯛魚・燙青菜・地瓜飯",[["fish",150],["sweetpotato",80],["rice",50],["@leafy",150],["oil",8]]),
+R("l21","LD","雞胸蔬菜沙拉","雞胸肉・番茄・小黃瓜・玉米・地瓜・優格醬",[["chicken",150],["cucumber",60],["tomato",80],["corn",50],["sweetpotato",150],["yogurt",40],["@leafy",60]]),
+R("l22","LD","牛肉炒青花定食","牛肉炒青花菜・紅蘿蔔・白飯",[["beef",100],["broccoli",150],["carrot",30],["rice",80],["oil",10]]),
+R("l23","LD","鮭魚菇菇炊飯","鮭魚鮮菇炊飯・燙青菜",[["salmon",100],["@mush",80],["rice",80],["@leafy",120],["oil",4]]),
+R("l24","LD","菠菜豬肉湯麵","豬里肌・菠菜・蛋・麵條",[["pork",80],["spinach",150],["egg",55],["noodles",80],["oil",3]]),
+R("l25","LD","雞胸溫沙拉碗","水煮雞胸・燙青花菜・蒸地瓜・溏心蛋",[["chicken",150],["broccoli",120],["@leafy",80],["sweetpotato",120],["egg",55]]),
+R("l26","LD","清燙蝦仁豆腐","清燙蝦仁・嫩煎豆腐・燙青菜・半碗飯",[["shrimp",100],["tofu",150],["@leafy",150],["rice",45],["oil",4]])
+];
+const MEALS=[["B","早餐",.24],["L","午餐",.32],["D","晚餐",.28]]; // 其餘約 16% 由加餐補足
+
+/* ---------- 三種目標模式 ---------- */
+const GOALS={
+  cut:{n:"減脂",sub:"熱量赤字約 20%",kf:.8,pk:1.6,fat:[20,30],carb:[40,55],oil:.6,scale:[.5,1.4],
+    tips:["熱量約為維持量的 80%，一週約減 0.3–0.5 公斤","蛋白質 1.6 g/kg，保住肌肉量","少油烹調（用油量 ×0.6），蔬菜份量不縮減","優先推薦雞胸、魚、蝦、豆腐等高蛋白低脂菜色"]},
+  keep:{n:"維持",sub:"均衡飲食",kf:1,pk:1.1,fat:[20,30],carb:[50,60],oil:1,scale:[.7,1.5],
+    tips:["熱量等於每日維持量","蛋白質 1.1 g/kg（國人膳食營養素參考攝取量）","脂肪占熱量 20–30%、醣類 50–60%","菜色輪替，六大類食物均衡攝取"]},
+  gain:{n:"增肌",sub:"熱量盈餘約 10%",kf:1.1,pk:1.8,fat:[20,30],carb:[50,60],oil:1,scale:[.8,1.7],
+    tips:["熱量約為維持量的 110%，請搭配阻力訓練","蛋白質 1.8 g/kg，分散在三餐與加餐","主食充足，醣類占熱量 50–60%","加餐自動加入豆漿、優格、蛋等蛋白質"]}
+};
+const NK=["k","p","f","c","fb","ca","fe","vc"];
+
+/* ---------- 狀態 ---------- */
+const SKEY="fridge-week-menu-v1";
+function sample(){
+  const list=[["egg",12],["chicken",500],["chicken_thigh",300],["pork_mince",300],["salmon",240],["tofu",400],["dried_tofu",200],
+    ["milk",1900],["yogurt",500],["toast",10],["sweetpotato",600],["potato",300],["cabbage",900],["bokchoy",400,1],["broccoli",500],
+    ["carrot",300],["tomato",500,1],["onion",300],["mushroom",150],["banana",6],["guava",3],["nuts",200]];
+  return {goal:"keep",sex:"f",weight:55,act:30,people:1,staples:true,seed:7,over:{},custom:[],sample:true,
+    inv:list.map(([key,q,p])=>({key,qty:q,prio:!!p}))};
+}
+function load(){
+  try{const j=JSON.parse(localStorage.getItem(SKEY));if(j&&Array.isArray(j.inv))return Object.assign(sample(),j)}catch(e){}
+  return sample();
+}
+function save(){try{localStorage.setItem(SKEY,JSON.stringify(S))}catch(e){}}
+let S=load();
+if(!GOALS[S.goal])S.goal="keep";
+function registerCustom(c){
+  const b=CUSTOM_BASE[c.cat];if(!b)return;
+  ING[c.key]={key:c.key,n:c.n,cat:c.cat,u:"g",gpu:1,k:b[0],p:b[1],f:b[2],c:b[3],fb:b[4],ca:b[5],fe:b[6],vc:b[7],cup:0,custom:true};
+}
+S.custom.forEach(registerCustom);
+S.inv=S.inv.filter(i=>ING[i.key]);
+
+/* ---------- 工具 ---------- */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]);
+const Z=()=>({k:0,p:0,f:0,c:0,fb:0,ca:0,fe:0,vc:0,veg:0,fruit:0,dairy:0});
+function nut(key,g){
+  const i=ING[key],o=Z();
+  for(const n of NK)o[n]=i[n]*g/100;
+  if(VEG_CATS.includes(i.cat))o.veg=g/100;
+  if(i.cat==="fruit")o.fruit=g/120;
+  if(i.cup)o.dairy=g/i.cup;
+  return o;
+}
+function add(a,b){for(const n in a)a[n]+=b[n];return a}
+function rng(seed){let a=seed>>>0;return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const isPantry=k=>k==="oil"||(S.staples&&STAPLES.includes(k));
+function roundAmt(key,g,step){
+  const i=ING[key];step=step||5;
+  if(i.u==="g"||i.u==="ml")return Math.max(step,Math.round(g/step)*step);
+  const us=i.cat==="fruit"?.5:1;
+  return Math.max(us,Math.round(g/i.gpu/us)*us)*i.gpu;
+}
+function fmtAmt(key,g){
+  const i=ING[key];
+  if(i.u==="g"||i.u==="ml")return `<span class="n">${Math.round(g)}</span> ${i.u}`;
+  const n=Math.round(g/i.gpu*2)/2;
+  return `<span class="n">${n%1?n.toFixed(1):n}</span> ${i.u}`;
+}
+function fmtBuy(key,g){
+  const i=ING[key];
+  if(i.u==="g"||i.u==="ml")return Math.ceil(g/50)*50+" "+i.u;
+  return Math.ceil(g/i.gpu-0.01)+" "+i.u;
+}
+function maintK(){return Math.round(S.weight*S.act/10)*10}
+function targets(goal){
+  const G=GOALS[goal||S.goal];
+  let k=Math.round(maintK()*G.kf/10)*10;
+  if(G===GOALS.cut)k=Math.max(k,S.sex==="f"?1200:1500);
+  return {k,p:Math.round(S.weight*G.pk),fb:Math.max(G===GOALS.cut?25:0,Math.round(k*14/1000)),ca:1000,fe:S.sex==="f"?15:10,vc:100,veg:3,fruit:2,dairy:1.5,fatR:G.fat,carbR:G.carb};
+}
+function recipeTags(base){
+  const pd=base.p*4/base.k,ff=base.f*9/base.k,t=[];
+  if(pd>=.3)t.push("高蛋白");
+  if(ff<=.25)t.push("低脂");
+  if(base.veg>=2)t.push("蔬菜多");
+  if(base.c*4/base.k>=.5&&base.k>=520)t.push("主食足");
+  return t;
+}
+// 模式偏好：減脂偏高蛋白低脂多蔬菜；增肌偏高蛋白、熱量與主食足
+function goalScore(base){
+  const pd=base.p*4/base.k,ff=base.f*9/base.k,cf=base.c*4/base.k;
+  if(S.goal==="cut")return 90*(pd-.25)-60*Math.max(0,ff-.28)+12*Math.min(1,base.veg/2);
+  if(S.goal==="gain")return 60*(pd-.2)+15*Math.min(1,base.k/650)+10*Math.min(1,cf/.5);
+  return -20*Math.max(0,ff-.35);
+}
+
+/* ---------- 排菜單 ---------- */
+function makePlan(){
+  const G=GOALS[S.goal],T=targets(),P=Math.max(1,Math.round(S.people)||1);
+  const stock={};
+  S.inv.forEach(it=>{stock[it.key]=(stock[it.key]||0)+Math.max(0,+it.qty||0)*ING[it.key].gpu});
+  const start=Object.assign({},stock);
+  const prio=new Set(S.inv.filter(i=>i.prio).map(i=>i.key));
+  const buy={},hist=[],days=[];
+  let fromFridge=0,needTotal=0;
+
+  function take(key,g){
+    if(isPantry(key))return "pantry";
+    const need=g*P,have=Math.min(stock[key]||0,need);
+    if(have>0)stock[key]-=have;
+    needTotal+=need;fromFridge+=have;
+    if(need-have>0.5)buy[key]=(buy[key]||0)+need-have;
+    return have>=need-0.5?"ok":have>0?"part":"miss";
+  }
+  function pickSlot(cat,exclude){
+    const c=Object.keys(stock).filter(x=>ING[x].cat===cat&&stock[x]>1&&!exclude.has(x));
+    c.sort((a,b)=>(prio.has(b)-prio.has(a))||(stock[b]-stock[a]));
+    return c[0]||SLOT_DEFAULT[cat];
+  }
+  function resolve(r){
+    const ex=new Set(r.items.map(x=>x[0]));
+    return r.items.map(([k,g])=>{
+      if(k[0]!=="@")return {key:k,g};
+      const cat=k.slice(1),key=pickSlot(cat,ex);ex.add(key);
+      return {key,g,slot:cat};
+    });
+  }
+  function evalBase(items){const b=Z();for(const it of items)add(b,nut(it.key,it.key==="oil"?it.g*G.oil:it.g));return b}
+  function availOf(items){
+    let av=0,n=0;
+    for(const it of items){if(isPantry(it.key))continue;n++;av+=Math.min(1,(stock[it.key]||0)/(it.g*P))}
+    return n?av/n:1;
+  }
+
+  // 此模式的推薦菜色（依目前冰箱）
+  const recs=RECIPES.map(r=>{const items=resolve(r),base=evalBase(items),avail=availOf(items);
+    return {r,avail,tags:recipeTags(base),score:goalScore(base)+avail*60}}).sort((a,b)=>b.score-a.score).slice(0,8);
+
+  const today=new Date();today.setHours(0,0,0,0);
+  for(let d=0;d<7;d++){
+    const date=new Date(today);date.setDate(today.getDate()+d);
+    const day={date,meals:[],snacks:[],tot:Z()};
+    MEALS.forEach(([m,label,share],mi)=>{
+      const rnd=rng(S.seed*1009+d*31+mi*7);
+      const scored=RECIPES.filter(r=>r.m.includes(m)).map(r=>{
+        const items=resolve(r),base=evalBase(items),avail=availOf(items);
+        let pr=0;for(const it of items)if(prio.has(it.key)&&stock[it.key]>0)pr++;
+        let v=0;
+        for(const h of hist)if(h.id===r.id)v-=(d-h.d<=2?70:25);
+        const prev=day.meals[day.meals.length-1];
+        if(prev&&prev.main===r.main)v-=20;
+        const t=day.tot,gap=(key,w)=>Math.min(base[key],Math.max(0,T[key]-t[key]))/T[key]*w;
+        const nb=gap("p",S.goal==="keep"?30:40)+gap("veg",20)+gap("fb",12)+gap("ca",10)+gap("fe",10)+gap("vc",8);
+        return {r,items,avail,base,score:avail*100+pr*8+nb+v+goalScore(base)+rnd()*10};
+      }).sort((a,b)=>b.score-a.score);
+
+      const key=d+m,ov=S.over[key];
+      const pick=(ov&&scored.find(x=>x.r.id===ov))||scored[0];
+      const s=Math.min(G.scale[1],Math.max(G.scale[0],T.k*share*(S.goal==="cut"?.9:1)/pick.base.k));
+      const tot=Z();
+      const items=pick.items.map(it=>{
+        let f=s;
+        if(it.key==="oil")f=s*G.oil;
+        else if(S.goal==="cut"&&VEG_CATS.includes(ING[it.key].cat))f=Math.max(1,s); // 減脂：蔬菜不縮減
+        const g=roundAmt(it.key,it.g*f);
+        const st=take(it.key,g);
+        add(tot,nut(it.key,g));
+        return Object.assign({},it,{g,st,prio:prio.has(it.key)});
+      });
+      add(day.tot,tot);
+      day.meals.push({m,label,key,r:pick.r,main:pick.r.main,items,tot,tags:recipeTags(pick.base),override:!!(ov&&pick.r.id===ov),
+        alts:scored.filter(x=>x.r.id!==pick.r.id).slice(0,6).map(x=>({id:x.r.id,n:x.r.n,avail:x.avail,tags:recipeTags(x.base)}))});
+      hist.push({d,id:pick.r.id});
+    });
+
+    // 加餐：水果、乳品、蛋白質、熱量
+    const t=day.tot,used=new Set();
+    const snack=(key,g,why)=>{used.add(key);const st=take(key,g);add(day.tot,nut(key,g));day.snacks.push({key,g,st,why,prio:prio.has(key)})};
+    const has=(k,min)=>(stock[k]||0)>=min;
+    if(t.fruit<1.8){
+      const k=pickSlot("fruit",new Set());
+      const room=S.goal==="cut"?160:200;
+      snack(k,roundAmt(k,Math.min(room,Math.max(100,(2-t.fruit)*120)),10),"水果");
+    }
+    const pGap=T.p-t.p;
+    if(pGap>T.p*(S.goal==="keep"?.2:.08)&&(S.goal!=="cut"||t.k<T.k)){
+      const opt=[["egg",55],["soymilk",300],["dried_tofu",60],["yogurt",150],["milk",240]].filter(([k])=>!used.has(k));
+      const [k,g]=opt.find(([k,g])=>has(k,g*Math.max(1,S.people)))||opt[0]||["egg",55];
+      const n=k==="egg"?(pGap>15&&S.goal==="gain"?2:1):1;
+      snack(k,g*n,"蛋白質");
+    }
+    const room=()=>S.goal!=="cut"||t.k<T.k*1.01;
+    if(t.dairy<1.3&&room()){
+      const k=S.goal==="cut"?(["yogurt","milk"].find(x=>has(x,100))||"yogurt"):(["milk","yogurt"].find(x=>has(x,100))||"milk");
+      snack(k,roundAmt(k,Math.min(S.goal==="cut"?150:240,Math.max(120,(1.5-t.dairy)*ING[k].cup)),10),"乳品");
+    }
+    if(S.goal==="gain"){
+      if(t.k<T.k*.95)snack("nuts",roundAmt("nuts",Math.min(40,Math.max(15,(T.k-t.k)/6)),5),"熱量");
+      if(t.k<T.k*.92){const k=has("toast",70)?"toast":has("sweetpotato",150)?"sweetpotato":"toast";snack(k,k==="toast"?70:150,"熱量")}
+    }else if(t.k<T.k*(S.goal==="cut"?.85:.92)){
+      snack("nuts",roundAmt("nuts",Math.min(30,Math.max(10,(T.k-t.k)/6)),5),"熱量");
+    }
+    days.push(day);
+  }
+  const left=Object.keys(stock).filter(k=>stock[k]>0.5).map(k=>({key:k,g:stock[k],unused:Math.abs(stock[k]-start[k])<0.5}));
+  return {T,P,days,buy,left,recs,self:needTotal?fromFridge/needTotal:1,prio};
+}
+
+/* ---------- 顯示 ---------- */
+const WD="日一二三四五六";
+const ROWS=[
+  ["k","熱量","kcal"],["p","蛋白質","g"],["fatp","脂肪","占熱量"],["carbp","醣類","占熱量"],
+  ["fb","膳食纖維","g"],["ca","鈣","mg"],["fe","鐵","mg"],["vc","維生素 C","mg"],
+  ["veg","蔬菜","份"],["fruit","水果","份"],["dairy","乳品","杯"]
+];
+function pctE(t){const e=t.p*4+t.f*9+t.c*4||1;return {p:t.p*4/e*100,f:t.f*9/e*100,c:t.c*4/e*100}}
+function rangeStat(v,[lo,hi]){return v>=lo&&v<=hi?"good":v>=lo-5&&v<=hi+5?"ok":v>hi?"high":"low"}
+function cell(key,t,T){
+  if(key==="fatp"){const v=pctE(t).f;return {txt:Math.round(v)+"%",s:rangeStat(v,T.fatR)}}
+  if(key==="carbp"){const v=pctE(t).c;return {txt:Math.round(v)+"%",s:rangeStat(v,T.carbR)}}
+  const r=t[key]/T[key];
+  if(key==="k")return {txt:Math.round(r*100)+"%",s:r<.85?"low":r<.93?"ok":r>1.15?"high":r>1.08?"ok":"good"};
+  return {txt:Math.round(r*100)+"%",s:r>=1?"good":r>=.8?"ok":"low"};
+}
+function tgtText(key,T){
+  if(key==="fatp")return T.fatR.join("–")+"%";
+  if(key==="carbp")return T.carbR.join("–")+"%";
+  if(key==="dairy")return "1.5–2 杯";
+  const unit={k:"kcal",p:"g",fb:"g",ca:"mg",fe:"mg",vc:"mg",veg:"份",fruit:"份"}[key];
+  return (key==="veg"||key==="fruit"?"≥ ":"")+T[key].toLocaleString()+" "+unit;
+}
+function isoWeek(d){const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const w=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-w);const y0=new Date(Date.UTC(t.getUTCFullYear(),0,1));return Math.ceil(((t-y0)/864e5+1)/7)}
+
+let PLAN=null,openSlot=null;
+
+function renderModes(){
+  $("modes").innerHTML=Object.entries(GOALS).map(([k,G])=>{const T=targets(k);return `
+    <button type="button" class="mode" role="tab" data-goal="${k}" id="tab-${k}" aria-selected="${S.goal===k}" aria-controls="memo">
+      <span class="mn">${G.n}</span><span class="ms">${G.sub}</span><span class="mk">${T.k.toLocaleString()} kcal・蛋白 ${T.p} g</span>
+    </button>`}).join("");
+  const tabColor={cut:"var(--tape-b)",keep:"var(--tape-g)",gain:"var(--tape-p)"}[S.goal];
+  document.documentElement.style.setProperty("--tab-c",tabColor);
+  $("memo").setAttribute("aria-labelledby","tab-"+S.goal);
+}
+function renderMemo(){
+  const G=GOALS[S.goal];
+  $("memo").innerHTML=`
+    <div><h3>${G.n}模式怎麼排</h3><ul>${G.tips.map(t=>`<li>${t}</li>`).join("")}</ul></div>
+    <div><h3>用你的冰箱，${G.n}推薦這幾道</h3>
+      <div class="recs">${PLAN.recs.map(x=>`<span class="rec">${esc(x.r.n)}<span class="n">${Math.round(x.avail*100)}%</span></span>`).join("")}</div>
+      <p class="hint" style="margin:6px 0 0">百分比＝冰箱食材齊全度。菜單會優先從這些菜挑，再依當天缺的營養調整。</p></div>`;
+}
+
+function renderSettings(){
+  $("sex").value=S.sex;$("weight").value=S.weight;$("act").value=String(S.act);$("people").value=S.people;$("staples").checked=!!S.staples;
+  const T=targets(),G=GOALS[S.goal];
+  $("targets").innerHTML=`維持熱量 <b>${maintK().toLocaleString()}</b> kcal，${G.n}目標 <b>${T.k.toLocaleString()}</b> kcal<br>蛋白質 <b>${T.p}</b> g・纖維 <b>${T.fb}</b> g・鈣 <b>1000</b> mg・鐵 <b>${T.fe}</b> mg・維C <b>100</b> mg<br>三餐熱量約 24%／32%／28%，其餘由加餐補足${S.people>1?`；份量顯示為每人，扣庫存時乘上 ${S.people} 人`:""}。`;
+  const d0=new Date(),d6=new Date();d6.setDate(d0.getDate()+6);
+  $("stamp").innerHTML=`<small>WEEK</small><b>${isoWeek(d0)}</b><small>${d0.getMonth()+1}/${d0.getDate()}–${d6.getMonth()+1}/${d6.getDate()}</small>`;
+  $("foot").textContent=`營養目標依衛福部《國人膳食營養素參考攝取量》第八版與《每日飲食指南》：維持熱量＝體重 × 活動係數（25／30／35／40 kcal/kg），減脂取 80%（女性不低於 1200、男性不低於 1500 kcal），增肌取 110%；蛋白質 維持 1.1、減脂 1.6、增肌 1.8 g/kg；膳食纖維 14 g／1000 kcal（減脂至少 25 g）；鈣 1000 mg；鐵 女 15／男 10 mg；維生素 C 100 mg；蔬菜 ≥ 3 份（1 份約 100 g 生重）、水果 ≥ 2 份、乳品 1.5–2 杯。食材營養素為參考台灣食品營養成分資料庫的近似值；油、鹽、醬油、蔥薑蒜等調味料視為家中常備。此工具僅供日常飲食規劃參考，有慢性病、懷孕或特殊飲食需求請諮詢營養師。`;
+}
+
+function renderInv(){
+  $("ingList").innerHTML=Object.values(ING).filter(i=>i.cat!=="fat"&&!i.custom).map(i=>`<option value="${esc(i.n)}"></option>`).join("");
+  $("inv-count").textContent=S.inv.length+" 項";
+  $("sampleNote").innerHTML=S.sample?`<p class="note">目前是<b>範例食材</b>，改成你冰箱裡的東西就會重新排。</p>`:"";
+  if(!S.inv.length){$("inv").innerHTML=`<p class="empty">冰箱是空的。從上方加入食材，或載入範例看看效果。</p>`;return}
+  const groups={};
+  S.inv.forEach((it,idx)=>{const c=ING[it.key].cat;(groups[c]=groups[c]||[]).push([it,idx])});
+  $("inv").innerHTML=Object.keys(CATS).filter(c=>groups[c]).map(c=>`
+    <div class="inv-cat"><span class="label">${CATS[c]}</span>
+    ${groups[c].map(([it,idx])=>{const i=ING[it.key];const pantry=isPantry(it.key);return `
+      <div class="inv-row">
+        <span class="nm">${esc(i.n)}${pantry?` <span class="u">（常備）</span>`:""}</span>
+        <input class="qty" id="q-${idx}" data-q="${idx}" type="number" min="0" step="any" value="${it.qty}" aria-label="${esc(i.n)} 數量" inputmode="decimal">
+        <span class="u">${i.u}</span>
+        <button type="button" class="icon-btn prio-btn" data-prio="${idx}" aria-pressed="${it.prio?"true":"false"}" title="優先用完（快過期）">優先</button>
+        <button type="button" class="icon-btn" data-del="${idx}" aria-label="移除 ${esc(i.n)}">✕</button>
+      </div>`}).join("")}
+    </div>`).join("");
+}
+
+function renderTiles(){
+  const {T,days,buy,self,prio,left}=PLAN;
+  const avgK=days.reduce((s,d)=>s+d.tot.k,0)/7,avgP=days.reduce((s,d)=>s+d.tot.p,0)/7;
+  const prioLeft=left.filter(l=>prio.has(l.key)).length;
+  $("tiles").innerHTML=`
+    <div class="tile"><span class="l">每日平均熱量</span><span class="v">${Math.round(avgK).toLocaleString()}<small> / ${T.k.toLocaleString()}</small></span></div>
+    <div class="tile"><span class="l">每日平均蛋白質</span><span class="v">${Math.round(avgP)}<small> / ${T.p} g</small></span></div>
+    <div class="tile"><span class="l">食材來自冰箱</span><span class="v">${Math.round(self*100)}<small>%</small></span></div>
+    <div class="tile"><span class="l">需要補買</span><span class="v">${Object.keys(buy).length}<small> 項</small></span></div>`;
+  $("board-note").textContent=(prio.size?`標「優先」的食材${prioLeft?`還剩 ${prioLeft} 項沒用完`:"都已排入"}・`:"")+"點菜名可以換一道";
+}
+
+function renderHeat(){
+  const {T,days}=PLAN;
+  const avg=Z();days.forEach(d=>add(avg,d.tot));for(const k in avg)avg[k]/=7;
+  let h=`<thead><tr><th scope="col" style="text-align:left">營養素</th><th scope="col">目標</th>${days.map(d=>`<th scope="col"><span class="n">${d.date.getMonth()+1}/${d.date.getDate()}</span> ${WD[d.date.getDay()]}</th>`).join("")}<th scope="col">週平均</th></tr></thead><tbody>`;
+  for(const [k,n,u] of ROWS){
+    h+=`<tr><th scope="row">${n}<small>${u}</small></th><td class="tg">${tgtText(k,T)}</td>`;
+    for(const d of days){const c=cell(k,d.tot,T);h+=`<td class="c"><span class="hl s-${c.s}">${c.txt}</span></td>`}
+    const c=cell(k,avg,T);h+=`<td class="c avg"><span class="hl s-${c.s}">${c.txt}</span></td></tr>`;
+  }
+  $("heat").innerHTML=h+"</tbody>";
+}
+
+function chip(it){
+  const i=ING[it.key];
+  const cls=it.st==="pantry"?"pantry":it.st==="miss"?"miss":it.st==="part"?"part":it.prio?"prio":"";
+  const tag=it.st==="miss"?`<span class="x">缺</span>`:it.st==="part"?`<span class="x">少</span>`:"";
+  const title=it.st==="pantry"?"常備食材":it.st==="miss"?"冰箱沒有，列入購物清單":it.st==="part"?"冰箱存量不足，差額列入購物清單":it.prio?"優先用完的食材":"冰箱有";
+  return `<span class="chip ${cls}" title="${title}">${esc(i.n)} ${fmtAmt(it.key,it.g)}${tag}</span>`;
+}
+
+function renderBoard(){
+  const {T,days}=PLAN;
+  $("board").innerHTML=days.map((d,di)=>{
+    const pe=pctE(d.tot);
+    const low=[["p","蛋白質"],["fb","纖維"],["ca","鈣"],["fe","鐵"],["vc","維C"],["veg","蔬菜"]].filter(([k])=>d.tot[k]<T[k]*.8)
+      .map(([k,n])=>`<span class="flag">${n} ${Math.round(d.tot[k]/T[k]*100)}%</span>`).join("");
+    return `<article class="day taped" aria-label="${d.date.getMonth()+1}月${d.date.getDate()}日">
+      <div class="dayhead"><div class="datecirc"><span class="mo">${d.date.getMonth()+1}月</span><span class="dd">${d.date.getDate()}</span></div>
+        <span class="wd">週${WD[d.date.getDay()]}</span>${di===0?`<span class="today">今天</span>`:""}</div>
+      ${d.meals.map(m=>{
+        const open=openSlot===m.key;
+        return `<div class="meal${m.override?" overridden":""}" data-m="${m.m}">
+          <div class="meal-top"><span class="mtag">${m.label}</span><span class="kc">${Math.round(m.tot.k)} kcal・蛋白 ${Math.round(m.tot.p)} g</span></div>
+          <button type="button" class="dish" data-alt="${m.key}" aria-expanded="${open}">${esc(m.r.n)}<span class="caret">${open?"收起":"換一道"}</span></button>
+          <div class="parts">${esc(m.r.d)}</div>
+          ${m.tags.length?`<div class="tags">${m.tags.map(t=>`<span class="tag">${t}</span>`).join("")}</div>`:""}
+          <div class="chips">${m.items.map(chip).join("")}</div>
+          ${open?`<div class="alts"><span class="t">其他選擇（冰箱食材齊全度）</span>${m.alts.map(a=>`<button type="button" class="alt" data-pick="${m.key}" data-id="${a.id}"><span>${esc(a.n)}${a.tags.length?`<span class="tg2">${a.tags.join("・")}</span>`:""}</span><span class="pct">${Math.round(a.avail*100)}%</span></button>`).join("")}</div>`:""}
+        </div>`}).join("")}
+      <div class="dayside">
+        <div class="blk"><span class="label">加餐</span>
+          <div class="chips">${d.snacks.length?d.snacks.map(chip).join(""):`<span class="chip pantry">三餐已足夠</span>`}</div></div>
+        <div class="blk"><span class="label">當日合計</span>
+          <span class="tot">${Math.round(d.tot.k).toLocaleString()}<small> / ${T.k.toLocaleString()} kcal</small></span>
+          <div class="macro" role="img" aria-label="蛋白質 ${Math.round(pe.p)}%、脂肪 ${Math.round(pe.f)}%、醣類 ${Math.round(pe.c)}%"><span class="mp" style="width:${pe.p}%"></span><span class="mf" style="width:${pe.f}%"></span><span class="mc" style="width:${pe.c}%"></span></div>
+          <div class="mlegend"><span><i style="background:var(--tape-p)"></i>蛋白 ${Math.round(pe.p)}%</span><span><i style="background:var(--tape-y)"></i>脂肪 ${Math.round(pe.f)}%</span><span><i style="background:var(--tape-g)"></i>醣 ${Math.round(pe.c)}%</span></div>
+        </div>
+        <div class="flags">${low||`<span class="flag ok">主要營養素皆 ≥ 80%</span>`}</div>
+      </div>
+    </article>`}).join("");
+}
+
+function buyEntries(){
+  const order=Object.keys(CATS);
+  return Object.entries(PLAN.buy).sort((a,b)=>order.indexOf(ING[a[0]].cat)-order.indexOf(ING[b[0]].cat));
+}
+function renderLists(){
+  const b=buyEntries();
+  $("buy").innerHTML=b.length?`<ul class="list">${b.map(([k,g])=>`<li><span>${esc(ING[k].n)}</span><span class="amt">${fmtBuy(k,g)}</span></li>`).join("")}</ul>`
+    :`<p class="empty">冰箱的食材就夠了，這週不用補買。</p>`;
+  const L=PLAN.left.filter(l=>!isPantry(l.key));
+  $("left").innerHTML=L.length?`<ul class="list">${L.map(l=>`<li><span>${esc(ING[l.key].n)}${PLAN.prio.has(l.key)?`<span class="star">優先</span>`:""}${l.unused?`<span class="star" style="color:var(--muted)">未排入</span>`:""}</span><span class="amt">${fmtAmt(l.key,l.g)}</span></li>`).join("")}</ul>`
+    :`<p class="empty">一週下來冰箱食材剛好用完。</p>`;
+}
+
+function renderPlan(){
+  PLAN=makePlan();
+  renderModes();renderMemo();renderTiles();renderHeat();renderBoard();renderLists();
+}
+function renderAll(){renderSettings();renderInv();renderPlan()}
+function changed(inv){if(inv)S.sample=false;save();}
+
+/* ---------- 事件 ---------- */
+$("modes").addEventListener("click",e=>{
+  const b=e.target.closest("[data-goal]");if(!b||b.dataset.goal===S.goal)return;
+  S.goal=b.dataset.goal;S.over={};openSlot=null;save();renderSettings();renderPlan();
+  $("tab-"+S.goal).focus();
+});
+$("modes").addEventListener("keydown",e=>{
+  if(e.key!=="ArrowRight"&&e.key!=="ArrowLeft")return;
+  const ks=Object.keys(GOALS),i=ks.indexOf(S.goal),n=ks[(i+(e.key==="ArrowRight"?1:2))%3];
+  S.goal=n;S.over={};openSlot=null;save();renderSettings();renderPlan();$("tab-"+n).focus();
+});
+["sex","weight","act","people","staples"].forEach(id=>$(id).addEventListener("change",()=>{
+  S.sex=$("sex").value;
+  S.weight=Math.min(150,Math.max(30,+$("weight").value||55));
+  S.act=+$("act").value;
+  S.people=Math.min(10,Math.max(1,Math.round(+$("people").value)||1));
+  S.staples=$("staples").checked;
+  changed();renderAll();
+}));
+
+const findIng=name=>Object.values(ING).find(i=>i.n===name.trim()&&i.cat!=="fat");
+$("addName").addEventListener("input",()=>{
+  const name=$("addName").value.trim(),i=findIng(name);
+  if(!name){$("addMeta").innerHTML=`<span class="hint">單位會依食材自動帶入</span>`;return}
+  if(i){$("addMeta").innerHTML=`<span class="hint">單位：${i.u}${i.u!=="g"&&i.u!=="ml"?`（1 ${i.u} 約 ${i.gpu} g）`:""}</span>`;return}
+  if(!$("addCat"))$("addMeta").innerHTML=`<select id="addCat" aria-label="自訂食材類別"><option value="leafy">葉菜類</option><option value="veg">其他蔬菜</option><option value="mush">菇類</option><option value="fruit">水果</option></select><span class="hint">自訂食材（g）</span>`;
+});
+$("addForm").addEventListener("submit",e=>{
+  e.preventDefault();
+  const name=$("addName").value.trim(),qty=+$("addQty").value;
+  if(!name||!(qty>0)){(name?$("addQty"):$("addName")).focus();return}
+  let i=findIng(name);
+  if(!i){
+    const cat=$("addCat")?$("addCat").value:"veg";
+    const c={key:"c_"+Date.now().toString(36),n:name.slice(0,20),cat};
+    S.custom.push(c);registerCustom(c);i=ING[c.key];
+  }
+  const ex=S.inv.find(x=>x.key===i.key);
+  if(ex)ex.qty=+(ex.qty+qty).toFixed(2);else S.inv.push({key:i.key,qty,prio:false});
+  $("addName").value="";$("addQty").value="";
+  $("addMeta").innerHTML=`<span class="hint">已加入 ${esc(i.n)} ${qty} ${i.u}</span>`;
+  changed(true);renderInv();renderPlan();$("addName").focus();
+});
+$("inv").addEventListener("change",e=>{
+  const q=e.target.dataset.q;if(q==null)return;
+  S.inv[+q].qty=Math.max(0,+e.target.value||0);changed(true);renderPlan();
+});
+$("inv").addEventListener("click",e=>{
+  const p=e.target.closest("[data-prio]"),d=e.target.closest("[data-del]");
+  if(p){const it=S.inv[+p.dataset.prio];it.prio=!it.prio;changed(true);renderInv();renderPlan()}
+  if(d){const it=S.inv.splice(+d.dataset.del,1)[0];if(ING[it.key].custom)S.custom=S.custom.filter(c=>c.key!==it.key);changed(true);renderInv();renderPlan()}
+});
+$("loadSample").addEventListener("click",()=>{
+  const s=sample();S.inv=s.inv;S.sample=true;S.over={};save();renderAll();
+});
+let clearArmed=false;
+$("clearInv").addEventListener("click",()=>{
+  if(!clearArmed){clearArmed=true;$("clearInv").textContent="再按一次確認清空";setTimeout(()=>{clearArmed=false;$("clearInv").textContent="清空冰箱"},3000);return}
+  clearArmed=false;$("clearInv").textContent="清空冰箱";
+  S.inv=[];S.custom=[];S.over={};changed(true);renderAll();
+});
+$("reroll").addEventListener("click",()=>{S.seed=(S.seed*7+13)%100003;S.over={};openSlot=null;save();renderPlan()});
+$("board").addEventListener("click",e=>{
+  const a=e.target.closest("[data-alt]"),p=e.target.closest("[data-pick]");
+  if(p){
+    // 固定目前其他餐，只換這一餐
+    PLAN.days.forEach(d=>d.meals.forEach(m=>{S.over[m.key]=m.r.id}));
+    S.over[p.dataset.pick]=p.dataset.id;openSlot=null;save();renderPlan();return;
+  }
+  if(a){openSlot=openSlot===a.dataset.alt?null:a.dataset.alt;renderBoard()}
+});
+$("copyBuy").addEventListener("click",()=>{
+  const txt="購物清單\n"+buyEntries().map(([k,g])=>"□ "+ING[k].n+" "+fmtBuy(k,g)).join("\n");
+  const btn=$("copyBuy");
+  const fallback=()=>{
+    let ta=document.querySelector("textarea.copybox");
+    if(!ta){ta=document.createElement("textarea");ta.className="copybox";ta.readOnly=true;ta.id="copybox";$("buy").appendChild(ta)}
+    ta.value=txt;ta.select();btn.textContent="請手動複製";
+  };
+  try{navigator.clipboard.writeText(txt).then(()=>{btn.textContent="已複製";setTimeout(()=>btn.textContent="複製清單",1800)},fallback)}catch(err){fallback()}
+});
+
+renderAll();
+})();
+</script>
+</body>
+</html>
